@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/sendbird/ccx/internal/clauderegistry"
 	"github.com/sendbird/ccx/internal/cli"
 	"github.com/sendbird/ccx/internal/kitty"
 	"github.com/sendbird/ccx/internal/session"
-	"github.com/sendbird/ccx/internal/tmux"
 	"github.com/sendbird/ccx/internal/tui"
 	"gopkg.in/yaml.v3"
 )
@@ -267,7 +267,7 @@ func main() {
 
 	initialSessions := session.LoadCachedSessions(claudeDir)
 	if len(initialSessions) == 0 {
-		livePaths := tmux.DetectLiveProjectPaths()
+		livePaths := clauderegistry.Cwds()
 		initialSessions, _ = session.ScanSessionsForPaths(claudeDir, livePaths)
 	}
 
