@@ -85,15 +85,15 @@ func (d cfgDelegate) Render(w io.Writer, m list.Model, index int, item list.Item
 	if ci.treeLast {
 		connector = "└─ "
 	}
-	connStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#4B5563"))
+	connStyle := lipgloss.NewStyle().Foreground(fgDimmer)
 	prefix := cursor + connStyle.Render(indent+connector)
 	prefixW := cursorW + lipgloss.Width(connStyle.Render(indent+connector))
 
-	nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#D1D5DB"))
+	nameStyle := lipgloss.NewStyle().Foreground(fgLight)
 	descStyle := lipgloss.NewStyle().Foreground(colorDim)
 	if selected {
-		nameStyle = nameStyle.Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
-		descStyle = descStyle.Foreground(lipgloss.Color("#9CA3AF"))
+		nameStyle = nameStyle.Foreground(fgBright).Bold(true)
+		descStyle = descStyle.Foreground(fgMuted)
 	}
 
 	// Highlight search match in name
@@ -2009,8 +2009,8 @@ func (a *App) renderProjectPickerOverlay(bg string) string {
 	filtered := a.cfgProjectFiltered()
 
 	hl := lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
-	nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#D1D5DB"))
-	selStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
+	nameStyle := lipgloss.NewStyle().Foreground(fgLight)
+	selStyle := lipgloss.NewStyle().Foreground(fgBright).Bold(true)
 	cursorStyle := lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
 
 	boxW := min(a.width-8, 70)

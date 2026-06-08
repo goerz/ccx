@@ -23,11 +23,11 @@ func homeDir() string {
 
 // Diff styles for colorized output
 var (
-	diffAddStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#4ADE80")) // green
-	diffDelStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#F87171")) // red
-	diffHunkStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#7DD3FC")) // cyan
+	diffAddStyle    = lipgloss.NewStyle().Foreground(hueGreenLight) // green
+	diffDelStyle    = lipgloss.NewStyle().Foreground(hueRedLight)   // red
+	diffHunkStyle   = lipgloss.NewStyle().Foreground(hueSkyLight)   // cyan
 	diffHeaderStyle = lipgloss.NewStyle().Foreground(colorDim)
-	diffCtxStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#9CA3AF")) // gray context lines
+	diffCtxStyle    = lipgloss.NewStyle().Foreground(fgMuted) // gray context lines
 )
 
 // editInput represents the JSON fields for an Edit tool call.
@@ -214,8 +214,8 @@ type bashInput struct {
 	RunInBackground bool   `json:"run_in_background"`
 }
 
-var bashCmdStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FBBF24")).Bold(true) // yellow
-var bashBgBadge = lipgloss.NewStyle().Foreground(lipgloss.Color("#22D3EE")).Bold(true)
+var bashCmdStyle = lipgloss.NewStyle().Foreground(hueYellow).Bold(true) // yellow
+var bashBgBadge = lipgloss.NewStyle().Foreground(hueCyanLight).Bold(true)
 
 func formatBashFolded(toolInput string) string {
 	var b bashInput
@@ -265,7 +265,7 @@ type monitorInput struct {
 	TimeoutMS   int    `json:"timeout_ms"`
 }
 
-var monitorBadgeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#22D3EE")).Bold(true)
+var monitorBadgeStyle = lipgloss.NewStyle().Foreground(hueCyanLight).Bold(true)
 
 func formatMonitorFolded(toolInput string) string {
 	var m monitorInput
@@ -345,7 +345,7 @@ type grepInput struct {
 	OutputMode string `json:"output_mode"`
 }
 
-var grepPatStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#F472B6")).Bold(true) // pink
+var grepPatStyle = lipgloss.NewStyle().Foreground(huePinkLight).Bold(true) // pink
 
 func formatGrepFolded(toolInput string) string {
 	var g grepInput

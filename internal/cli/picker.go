@@ -17,11 +17,25 @@ import (
 	"github.com/sendbird/ccx/internal/kitty"
 )
 
+// Adaptive palette used by the standalone picker. These mirror the
+// corresponding entries in internal/tui/styles.go so the picker matches the
+// main TUI's light/dark color scheme.
+var (
+	fgDim         = lipgloss.AdaptiveColor{Dark: "#6B7280", Light: "#6B7280"}
+	fgFaint       = lipgloss.AdaptiveColor{Dark: "#374151", Light: "#D1D5DB"}
+	hueSky        = lipgloss.AdaptiveColor{Dark: "#38BDF8", Light: "#0284C7"}
+	hueSkyLight   = lipgloss.AdaptiveColor{Dark: "#7DD3FC", Light: "#0369A1"}
+	hueIndigo     = lipgloss.AdaptiveColor{Dark: "#6366F1", Light: "#4F46E5"}
+	hueAmber      = lipgloss.AdaptiveColor{Dark: "#F59E0B", Light: "#B45309"}
+	hueGreenLight = lipgloss.AdaptiveColor{Dark: "#4ADE80", Light: "#16A34A"}
+	hueRedLight   = lipgloss.AdaptiveColor{Dark: "#F87171", Light: "#DC2626"}
+)
+
 var pickerDiffStyles = extract.DiffStyles{
-	Add:    func(s string) string { return lipgloss.NewStyle().Foreground(lipgloss.Color("#4ADE80")).Render(s) },
-	Del:    func(s string) string { return lipgloss.NewStyle().Foreground(lipgloss.Color("#F87171")).Render(s) },
-	Hunk:   func(s string) string { return lipgloss.NewStyle().Foreground(lipgloss.Color("#7DD3FC")).Render(s) },
-	Header: func(s string) string { return lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280")).Render(s) },
+	Add:    func(s string) string { return lipgloss.NewStyle().Foreground(hueGreenLight).Render(s) },
+	Del:    func(s string) string { return lipgloss.NewStyle().Foreground(hueRedLight).Render(s) },
+	Hunk:   func(s string) string { return lipgloss.NewStyle().Foreground(hueSkyLight).Render(s) },
+	Header: func(s string) string { return lipgloss.NewStyle().Foreground(fgDim).Render(s) },
 }
 
 // PickerResult is returned when the picker exits with a jump target.
@@ -488,9 +502,9 @@ func (m *pickerModel) updatePreview() {
 	item := m.items[m.cursor]
 	pw := m.previewWidth()
 
-	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280"))
-	accent := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#38BDF8"))
-	highlight := lipgloss.NewStyle().Foreground(lipgloss.Color("#F59E0B"))
+	dim := lipgloss.NewStyle().Foreground(fgDim)
+	accent := lipgloss.NewStyle().Bold(true).Foreground(hueSky)
+	highlight := lipgloss.NewStyle().Foreground(hueAmber)
 
 	var sb strings.Builder
 
@@ -593,7 +607,7 @@ func renderConversationListRow(item PickerItem, selected bool, selectedMark, pla
 	plainBadge := strings.ToUpper(item.Item.Category)
 	plainBadge = truncateWidth(plainBadge, 5)
 	plainBadge = padRightWidth(plainBadge, 5)
-	badgeStyled := lipgloss.NewStyle().Foreground(lipgloss.Color("#6366F1")).Bold(true).Render(plainBadge)
+	badgeStyled := lipgloss.NewStyle().Foreground(hueIndigo).Bold(true).Render(plainBadge)
 
 	cursorPlain := " "
 	cursorStyled := " "
@@ -652,9 +666,9 @@ func (m pickerModel) View() string {
 	pw := m.previewWidth()
 	contentH := m.height - 2
 
-	sel := lipgloss.NewStyle().Foreground(lipgloss.Color("#38BDF8")).Bold(true)
-	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280"))
-	cat := lipgloss.NewStyle().Foreground(lipgloss.Color("#6366F1")).Bold(true)
+	sel := lipgloss.NewStyle().Foreground(hueSky).Bold(true)
+	dim := lipgloss.NewStyle().Foreground(fgDim)
+	cat := lipgloss.NewStyle().Foreground(hueIndigo).Bold(true)
 
 	maxListLines := contentH - 2 // reserve for scrollInfo
 	if maxListLines < 3 {
@@ -737,9 +751,9 @@ func (m pickerModel) View() string {
 	listContent += "\n" + scrollInfo
 
 	listBox := lipgloss.NewStyle().Width(listW).Height(contentH).Render(listContent)
-	borderColor := lipgloss.Color("#374151")
+	borderColor := fgFaint
 	if m.previewFocused {
-		borderColor = lipgloss.Color("#38BDF8")
+		borderColor = hueSky
 	}
 	previewBox := lipgloss.NewStyle().
 		Width(pw).Height(contentH).
@@ -749,7 +763,7 @@ func (m pickerModel) View() string {
 		PaddingLeft(1).
 		Render(m.preview.View())
 
-	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#38BDF8")).
+	title := lipgloss.NewStyle().Bold(true).Foreground(hueSky).
 		Render(fmt.Sprintf(" %s (%d)", m.kind, len(m.allItems)))
 
 	actions := "↵:jump"
@@ -768,7 +782,7 @@ func (m pickerModel) View() string {
 	var footer string
 	if m.searching {
 		// Show filter hints when search is active
-		hint := lipgloss.NewStyle().Foreground(lipgloss.Color("#38BDF8"))
+		hint := lipgloss.NewStyle().Foreground(hueSky)
 		filterHints := ""
 		switch m.kind {
 		case "urls":
@@ -1013,10 +1027,10 @@ func (m pickerModel) conversationPreview() string {
 	item := m.items[m.cursor]
 	ref := item.FirstRef()
 
-	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280"))
-	accent := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#38BDF8"))
-	highlight := lipgloss.NewStyle().Foreground(lipgloss.Color("#F59E0B"))
-	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#38BDF8")).Bold(true)
+	dim := lipgloss.NewStyle().Foreground(fgDim)
+	accent := lipgloss.NewStyle().Bold(true).Foreground(hueSky)
+	highlight := lipgloss.NewStyle().Foreground(hueAmber)
+	selectedStyle := lipgloss.NewStyle().Foreground(hueSky).Bold(true)
 
 	var sb strings.Builder
 	modeLabel := "conversation"

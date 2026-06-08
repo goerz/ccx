@@ -86,7 +86,7 @@ func (a *App) buildRemoteProgressView(sess *remote.Session, currentStep string) 
 	valStyle := lipgloss.NewStyle().Foreground(colorAccent)
 
 	var sb strings.Builder
-	expStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#F59E0B")).Italic(true)
+	expStyle := lipgloss.NewStyle().Foreground(hueAmber).Italic(true)
 	sb.WriteString(titleStyle.Render("Remote Session") + " " + expStyle.Render("(experimental)") + "\n\n")
 	sb.WriteString(labelStyle.Render("  Context:   ") + valStyle.Render(sess.Config.Context) + "\n")
 	sb.WriteString(labelStyle.Render("  Namespace: ") + valStyle.Render(sess.Config.Namespace) + "\n")
@@ -110,7 +110,7 @@ func (a *App) buildRemoteProgressView(sess *remote.Session, currentStep string) 
 		sb.WriteString("  " + lipgloss.NewStyle().Foreground(colorAccent).Render("✓") + " " + step + "\n")
 	}
 	if currentStep != "" {
-		sb.WriteString("  " + lipgloss.NewStyle().Foreground(lipgloss.Color("#F59E0B")).Render("◉") + " " + currentStep + "\n")
+		sb.WriteString("  " + lipgloss.NewStyle().Foreground(hueAmber).Render("◉") + " " + currentStep + "\n")
 	}
 	return sb.String()
 }

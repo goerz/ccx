@@ -2937,7 +2937,7 @@ func overlayTooltip(bg, text string, screenW, screenH, cursorIdx, perPage, scrol
 
 	tooltipStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#7DD3FC")).
+		BorderForeground(hueSkyLight).
 		Width(maxW).
 		Padding(0, 1)
 
@@ -3299,7 +3299,7 @@ func (a *App) clearBlockFilter() {
 
 // renderBlockFilterHintBox renders a floating hint box for block filter syntax.
 func renderBlockFilterHintBox() string {
-	h := lipgloss.NewStyle().Foreground(lipgloss.Color("#38BDF8"))
+	h := lipgloss.NewStyle().Foreground(hueSky)
 	d := dimStyle
 
 	lines := []string{

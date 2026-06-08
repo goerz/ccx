@@ -201,7 +201,7 @@ func (a *App) renderSearchView() string {
 
 	inputStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("240")).
+		BorderForeground(ansiGray).
 		Padding(0, 1).
 		Width(min(a.width-6, 60)).
 		MarginLeft(2)
@@ -231,7 +231,7 @@ func (a *App) renderSearchView() string {
 	} else if a.searchQuery == "" {
 		sb.WriteString("  " + dimStyle.Render("Type a query and press Enter to search") + "\n\n")
 
-		keyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Bold(true)
+		keyStyle := lipgloss.NewStyle().Foreground(ansiCyan).Bold(true)
 		descStyle := dimStyle
 
 		sb.WriteString("  " + titleStyle.Render("Syntax") + "\n")

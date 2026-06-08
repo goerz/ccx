@@ -2700,7 +2700,7 @@ func (a *App) renderViewsHintBox() string {
 	var parts []string
 	viewLabel := func(k, label string, active bool) string {
 		if active {
-			return lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Bold(true).Render("[" + label + "]")
+			return lipgloss.NewStyle().Foreground(fgBright).Bold(true).Render("[" + label + "]")
 		}
 		return h.Render(displayKey(k)) + d.Render(":"+label)
 	}
@@ -4881,8 +4881,8 @@ func (a *App) buildShellsPreviewContent(sess session.Session) string {
 	header += "] ──"
 	sb.WriteString(dimStyle.Render(header) + "\n\n")
 
-	bashStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FBBF24")).Bold(true)
-	monStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#22D3EE")).Bold(true)
+	bashStyle := lipgloss.NewStyle().Foreground(hueYellow).Bold(true)
+	monStyle := lipgloss.NewStyle().Foreground(hueCyanLight).Bold(true)
 
 	for _, j := range jobs {
 		icon, statusColor := "◉", colorAssistant
@@ -5098,7 +5098,7 @@ func (a *App) buildAgentsPreviewContent(sess session.Session) string {
 		label = fmt.Sprintf("── Agents [%d, %d active] ↵:jump ──", len(agents), running)
 	}
 	sb.WriteString(dimStyle.Render(label) + "\n\n")
-	sel := lipgloss.NewStyle().Foreground(lipgloss.Color("#38BDF8")).Bold(true)
+	sel := lipgloss.NewStyle().Foreground(hueSky).Bold(true)
 	for i, ag := range agents {
 		icon := "⊕"
 		style := dimStyle
@@ -5378,7 +5378,7 @@ func (a *App) renderActionsHintBox() string {
 
 // renderSearchHintBox renders a compact bordered hint box for search filters.
 func (a *App) renderSearchHintBox() string {
-	h := lipgloss.NewStyle().Foreground(lipgloss.Color("#38BDF8"))
+	h := lipgloss.NewStyle().Foreground(hueSky)
 	d := dimStyle
 
 	var lines []string
@@ -5980,9 +5980,9 @@ func (a *App) renderBreadcrumb() string {
 	// Build the styled breadcrumb and track click regions
 	a.breadcrumbSegs = a.breadcrumbSegs[:0]
 	sepText := " > "
-	sepStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280")).Background(colorTitleBg)
-	parentStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#9CA3AF")).Background(colorTitleBg)
-	activeStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#E2E8F0")).Background(colorTitleBg)
+	sepStyle := lipgloss.NewStyle().Foreground(fgDim).Background(colorTitleBg)
+	parentStyle := lipgloss.NewStyle().Foreground(fgMuted).Background(colorTitleBg)
+	activeStyle := lipgloss.NewStyle().Bold(true).Foreground(fgVeryLight).Background(colorTitleBg)
 
 	var text string
 	x := 0
@@ -6028,13 +6028,13 @@ func (a *App) renderBreadcrumb() string {
 	}
 
 	if len(actions) > 0 {
-		actionStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#9CA3AF")).Background(colorTitleBg)
-		sepAction := lipgloss.NewStyle().Foreground(lipgloss.Color("#4B5563")).Background(colorTitleBg).Render("  ")
+		actionStyle := lipgloss.NewStyle().Foreground(fgMuted).Background(colorTitleBg)
+		sepAction := lipgloss.NewStyle().Foreground(fgDimmer).Background(colorTitleBg).Render("  ")
 		text += sepAction
 		x += lipgloss.Width(sepAction)
 		for i, act := range actions {
 			if i > 0 {
-				divider := lipgloss.NewStyle().Foreground(lipgloss.Color("#4B5563")).Background(colorTitleBg).Render(" ")
+				divider := lipgloss.NewStyle().Foreground(fgDimmer).Background(colorTitleBg).Render(" ")
 				text += divider
 				x += lipgloss.Width(divider)
 			}
@@ -6053,7 +6053,7 @@ func (a *App) renderBreadcrumb() string {
 	// Right-aligned status: item count + scroll % + loading
 	rightParts := a.breadcrumbRightStatus()
 	if rightParts != "" {
-		countStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#A1A1AA")).Background(colorTitleBg)
+		countStyle := lipgloss.NewStyle().Foreground(fgMutedZinc).Background(colorTitleBg)
 		rightStr := countStyle.Render(rightParts + " ")
 		rightW := lipgloss.Width(rightStr)
 		maxLeftW := max(a.width-rightW-1, 1)
@@ -6094,11 +6094,11 @@ func (a *App) breadcrumbRightStatus() string {
 
 	// Preview mode badge for conversation/message views
 	if a.state == viewConversation {
-		modeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#38BDF8")).Bold(true)
+		modeStyle := lipgloss.NewStyle().Foreground(hueSky).Bold(true)
 		parts = append(parts, modeStyle.Render(strings.ToUpper(convPaneModeLabels[a.conv.leftPaneMode])))
 		parts = append(parts, modeStyle.Render(strings.ToUpper(previewModeLabels[a.conv.rightPaneMode])))
 	} else if a.state == viewMessageFull {
-		modeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#38BDF8")).Bold(true)
+		modeStyle := lipgloss.NewStyle().Foreground(hueSky).Bold(true)
 		parts = append(parts, modeStyle.Render(strings.ToUpper(previewModeLabels[a.conv.rightPaneMode])))
 	}
 

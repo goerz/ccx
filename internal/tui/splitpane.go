@@ -103,12 +103,12 @@ func hexToRGB(hex string) (uint8, uint8, uint8) {
 	return r, g, b
 }
 
-func renderFixedSplit(left, right string, listW, previewW, contentH int, borderColor lipgloss.Color) string {
+func renderFixedSplit(left, right string, listW, previewW, contentH int, borderColor lipgloss.TerminalColor) string {
 	leftLines := strings.Split(left, "\n")
 	rightLines := strings.Split(right, "\n")
 	// Build border with raw ANSI to avoid lipgloss wrapping artifacts.
-	// Convert lipgloss.Color hex to ANSI 24-bit color sequence.
-	br, bg, bb := hexToRGB(string(borderColor))
+	// Convert the color hex to ANSI 24-bit color sequence.
+	br, bg, bb := hexToRGB(resolveHex(borderColor))
 	borderCell := fmt.Sprintf("\x1b[38;2;%d;%d;%dm│\x1b[0m", br, bg, bb)
 	const reset = "\x1b[0m"
 	// CHA (Cursor Horizontal Absolute) — positions cursor at exact column (1-based)

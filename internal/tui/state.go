@@ -35,6 +35,7 @@ type KeymapsConfig struct {
 // CCXConfig is the unified config file containing keybindings + preferences.
 // Stored at ~/.config/ccx/config.yaml.
 type CCXConfig struct {
+	Theme       string           `yaml:"theme,omitempty"` // auto|light|dark (color scheme for the terminal background)
 	Keymaps     KeymapsConfig    `yaml:"keymaps,omitempty"`
 	Preferences Preferences      `yaml:"preferences,omitempty"`
 	Shortcuts   Shortcuts        `yaml:"shortcuts,omitempty"`
@@ -81,6 +82,20 @@ func LoadCCXConfig(path string) (*Keymap, Preferences, Shortcuts, remote.Config,
 	cfg.Shortcuts = sc
 
 	return &km, cfg.Preferences, sc, cfg.Remote, cfg.Claude
+}
+
+// LoadTheme reads just the color-scheme setting ("auto"|"light"|"dark") from the
+// config file. Returns "" (auto) when unset or unreadable.
+func LoadTheme(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	var cfg CCXConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return ""
+	}
+	return cfg.Theme
 }
 
 // SavePreferences updates the preferences section in the config file,

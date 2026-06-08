@@ -170,6 +170,7 @@ func main() {
 		previewMode  string
 		viewMode     string
 		sessionID    string
+		themeFlag    string
 		jumpSession  string
 		jumpUUID     string
 	)
@@ -236,6 +237,7 @@ func main() {
 		flag.StringVar(&previewMode, "preview", "", "initial preview mode (conv|stats|mem|tasks)")
 		flag.StringVar(&viewMode, "view", "", "initial view (sessions|config|plugins|stats)")
 		flag.StringVar(&sessionID, "session", "", "open a specific session by ID (prefix match)")
+		flag.StringVar(&themeFlag, "theme", "", "color scheme: auto|light|dark (overrides config; auto detects terminal background)")
 		flag.Usage = func() {
 			fmt.Fprintf(os.Stderr, "ccx — Claude Code Explorer\n\n")
 			fmt.Fprintf(os.Stderr, "Usage: ccx [flags]\n")
@@ -264,6 +266,13 @@ func main() {
 
 	configPath := filepath.Join(os.Getenv("HOME"), ".config", "ccx", "config.yaml")
 	km, _, _, _, cc := tui.LoadCCXConfig(configPath)
+
+	// Resolve color scheme: -theme flag overrides the config's theme setting.
+	theme := themeFlag
+	if theme == "" {
+		theme = tui.LoadTheme(configPath)
+	}
+	tui.ApplyTheme(theme)
 
 	initialSessions := session.LoadCachedSessions(claudeDir)
 	if len(initialSessions) == 0 {

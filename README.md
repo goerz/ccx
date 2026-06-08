@@ -100,8 +100,11 @@ ccx sessions -pick -multi | jq '.sessions | length'
 | `-tmux` | Enable tmux integration (auto-detected) |
 | `-tmux-auto-live` | Auto-enter live session in same tmux window |
 | `-worktree-dir NAME` | Worktree subdirectory name (default: `.worktree`) |
+| `-theme MODE` | Color scheme: `auto`, `light`, `dark` (overrides config) |
 
 The Claude data directory is resolved in order: `--dir` flag → `CLAUDE_CONFIG_DIR` env → `~/.claude`.
+
+The color scheme is resolved in order: `-theme` flag → `theme` in config → `auto`. In `auto` mode ccx defaults to the light palette and only switches to dark when it has positive evidence of a dark background (a `COLORFGBG` hint, or a direct terminal that reports a dark background via OSC 11). Inside tmux/screen the background query is unreliable, so `auto` stays light there — set `theme: dark` (or `-theme dark`) to pin a dark scheme.
 
 ## Views
 
@@ -423,6 +426,14 @@ Short aliases: `g:flat`, `v:stats`, `p:hooks`, `cfg:edit`. Multi-command: `view:
 Config file: `~/.config/ccx/config.yaml` (bootstrap with `:config:edit`)
 
 The config file contains these sections:
+
+### Theme
+
+```yaml
+theme: auto   # auto|light|dark — color scheme for the terminal background
+```
+
+`auto` defaults to light and only uses dark when it detects a dark background (unreliable inside tmux/screen, where it stays light); `light`/`dark` force the corresponding palette. The `-theme` flag overrides this setting.
 
 ### Keybindings
 

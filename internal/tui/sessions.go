@@ -216,11 +216,11 @@ func (d sessionDelegate) Render(w io.Writer, m list.Model, index int, item list.
 	branchStyle := dimStyle
 	promptStyle := dimStyle
 	if selected {
-		idStyle = idStyle.Foreground(lipgloss.Color("#A78BFA"))
-		timeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#9CA3AF"))
+		idStyle = idStyle.Foreground(hueVioletLight)
+		timeStyle = lipgloss.NewStyle().Foreground(fgMuted)
 		msgStyle = msgStyle.Bold(true)
-		projStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#E2E8F0")).Bold(true)
-		branchStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#9CA3AF"))
+		projStyle = lipgloss.NewStyle().Foreground(fgVeryLight).Bold(true)
+		branchStyle = lipgloss.NewStyle().Foreground(fgMuted)
 		promptStyle = selectedStyle
 	}
 
@@ -280,7 +280,7 @@ func (d sessionDelegate) Render(w io.Writer, m list.Model, index int, item list.
 		badgesW += len(badgeText) + 1
 	}
 	if s.IsRemote {
-		remoteBadge := lipgloss.NewStyle().Foreground(lipgloss.Color("#7C3AED")).Bold(true)
+		remoteBadge := lipgloss.NewStyle().Foreground(huePrimary).Bold(true)
 		badges += " " + remoteBadge.Render("[R·exp]")
 		badgesW += 8
 	}
@@ -1014,7 +1014,7 @@ func renderHelpModal(bg string, screenW, screenH int, km Keymap, shortcutHint st
 		{waitBadgeStyle, "[WAIT]", "Idle, waiting for user"},
 		{doneBadgeStyle, "[DONE]", "All work completed"},
 		{stuckBadgeStyle, "[STUCK]", "Live but stale with unfinished work"},
-		{lipgloss.NewStyle().Foreground(lipgloss.Color("#7C3AED")).Bold(true), "[R·exp]", "Remote (experimental)"},
+		{lipgloss.NewStyle().Foreground(huePrimary).Bold(true), "[R·exp]", "Remote (experimental)"},
 	}
 	// Render badges in pairs (two per line)
 	for i := 0; i < len(allBadges); i += 2 {

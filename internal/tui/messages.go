@@ -753,7 +753,11 @@ func padToWidth(line string, width int) string {
 // contain inner ANSI resets. It re-applies the background after every \x1b[0m
 // so the highlight covers the full width without gaps.
 func applyBgToLine(line string, width int) string {
-	const bgCode = "\x1b[48;2;30;41;59m" // #1E293B
+	// Derive the background from the adaptive bgPanel color so the highlight
+	// matches selectedRowStyle/blockSelectedBg and stays readable on light
+	// terminals (where it resolves to a light tint instead of dark slate).
+	r, g, b := hexToRGB(resolveHex(bgPanel))
+	bgCode := fmt.Sprintf("\x1b[48;2;%d;%d;%dm", r, g, b)
 	const resetCode = "\x1b[0m"
 	padded := padToWidth(line, width)
 	inner := strings.ReplaceAll(padded, resetCode, resetCode+bgCode)
