@@ -142,6 +142,24 @@ func hasVisibleContent(e session.Entry) bool {
 	return false
 }
 
+// hasConversationalContent returns true if the entry has dialogue meaningful
+// in a plain conversation export: a real (non-system) text block or an image.
+// Unlike hasVisibleContent, tool calls and tool results do not count.
+func hasConversationalContent(e session.Entry) bool {
+	for _, b := range e.Content {
+		if b.Type == "image" {
+			return true
+		}
+		if b.Type == "text" {
+			text := strings.TrimSpace(b.Text)
+			if text != "" && !isSystemText(text) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // isSystemText returns true if text is system-generated content
 // (e.g. <system-reminder> tags) or API noise rather than real conversation.
 func isSystemText(text string) bool {

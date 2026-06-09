@@ -3187,7 +3187,10 @@ func (a *App) openAgentConversation(agent session.Subagent) (tea.Model, tea.Cmd)
 }
 
 // openConvAsText exports the conversation as plain text and opens it in $EDITOR.
-func (a *App) openConvAsText() (tea.Model, tea.Cmd) {
+// When conversationOnly is true, only user prompts and assistant replies are
+// included (tool use, results, and thinking are hidden); otherwise everything
+// is expanded in full.
+func (a *App) openConvAsText(conversationOnly bool) (tea.Model, tea.Cmd) {
 	// In the session view the conversation lives in the preview (sessConvEntries);
 	// a.conv.merged is only populated once a conversation is opened with Enter.
 	merged := a.conv.merged
@@ -3198,8 +3201,15 @@ func (a *App) openConvAsText() (tea.Model, tea.Cmd) {
 		a.copiedMsg = "No messages"
 		return a, nil
 	}
-	content := stripANSI(renderAllMessages(merged, 80))
-	tmpFile, err := os.CreateTemp("", "ccx-conv-*.txt")
+	var content, pattern string
+	if conversationOnly {
+		content = stripANSI(renderConversationText(merged, 80))
+		pattern = "ccx-conv-*.md"
+	} else {
+		content = stripANSI(renderFullText(merged, 80))
+		pattern = "ccx-conv-*.txt"
+	}
+	tmpFile, err := os.CreateTemp("", pattern)
 	if err != nil {
 		a.copiedMsg = "Error: " + err.Error()
 		return a, nil

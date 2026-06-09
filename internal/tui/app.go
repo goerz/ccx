@@ -2690,7 +2690,10 @@ func (a *App) openEditMenu(sess session.Session) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	a.editChoices = append(a.editChoices, editChoice{"t", "text", ""})
+	a.editChoices = append(a.editChoices,
+		editChoice{"c", "conversation", ""},
+		editChoice{"t", "full text", ""},
+	)
 	return a, nil
 }
 
@@ -2702,7 +2705,10 @@ func (a *App) handleEditMenu(key string) (tea.Model, tea.Cmd) {
 		}
 	}
 	if key == "t" {
-		return a.openConvAsText()
+		return a.openConvAsText(false)
+	}
+	if key == "c" {
+		return a.openConvAsText(true)
 	}
 	a.copiedMsg = ""
 	return a, nil

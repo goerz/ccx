@@ -427,11 +427,88 @@ func renderFullMessageFolded(e session.Entry, width int, folds foldSet) string {
 	return rp.content
 }
 
+// renderFullText renders every message in full (all tool use, results, and
+// thinking expanded) with emoji-marked headers bracketed by rulers, for the
+// "full text" export.
+func renderFullText(merged []mergedMsg, width int) string {
+	ruler := strings.Repeat("─", max(min(width, 80), 0))
+	var sb strings.Builder
+	for i, m := range merged {
+		if i > 0 {
+			sb.WriteString("\n")
+		}
+		rp := renderFullMessageWithCursor(m.entry, width, nil, nil, -1, renderOpts{hideHeader: true})
+		sb.WriteString(ruler + "\n")
+		sb.WriteString(messageHeaderLabel(m.entry) + "\n")
+		sb.WriteString(ruler + "\n\n")
+		sb.WriteString(rp.content)
+	}
+	return sb.String()
+}
+
+// renderConversationText renders only the conversational text of each message
+// (user prompts and assistant replies), hiding tool use, tool results,
+// thinking, and system blocks — roughly what the user saw while interacting
+// with Claude. Messages with no conversational text are skipped entirely.
+func renderConversationText(merged []mergedMsg, width int) string {
+	var sb strings.Builder
+	first := true
+	for _, m := range merged {
+		e := m.entry
+		if !hasConversationalContent(e) {
+			continue
+		}
+		visible := make([]bool, len(e.Content))
+		for i, b := range e.Content {
+			visible[i] = b.Type == "text" || b.Type == "image"
+		}
+		rp := renderFullMessageWithCursor(e, width, nil, nil, -1,
+			renderOpts{visible: visible, hideHooks: true, hideHeader: true})
+		if !first {
+			sb.WriteString("\n")
+		}
+		first = false
+		sb.WriteString(conversationHeader(e) + "\n\n")
+		sb.WriteString(rp.content)
+	}
+	return sb.String()
+}
+
+// messageHeaderLabel builds the emoji-marked role line used in conversation
+// exports, e.g. " 🤖 ASSISTANT  2026-06-09 21:11:48  model=claude-opus-4-8".
+func messageHeaderLabel(e session.Entry) string {
+	var label string
+	switch {
+	case isAutoCompacted(e):
+		label = "📋 COMPACTION SUMMARY"
+	case e.Role == "user":
+		label = "🧑 USER"
+	default:
+		label = "🤖 ASSISTANT"
+	}
+	if !e.Timestamp.IsZero() {
+		label += "  " + e.Timestamp.Format("2006-01-02 15:04:05")
+	}
+	if e.Model != "" {
+		label += "  model=" + e.Model
+	}
+	return label
+}
+
+// conversationHeader builds the Markdown header line for a message in the
+// conversation export, e.g. "** 🤖 ASSISTANT  2026-06-09 15:04:05  model=… **".
+// The non-breaking spaces inside the ** markers keep the line bold in Markdown
+// while reading as padding.
+func conversationHeader(e session.Entry) string {
+	return "**" + " " + messageHeaderLabel(e) + " " + "**"
+}
+
 // renderOpts bundles optional rendering flags for renderFullMessageImpl.
 type renderOpts struct {
-	visible   []bool  // per-block visibility (nil = all visible)
-	hideHooks bool    // suppress hook badges/details
-	selected  foldSet // blocks selected for copy (nil = none)
+	visible    []bool  // per-block visibility (nil = all visible)
+	hideHooks  bool    // suppress hook badges/details
+	selected   foldSet // blocks selected for copy (nil = none)
+	hideHeader bool    // suppress the role label + ruler line (caller supplies its own)
 }
 
 func renderFullMessageWithCursor(e session.Entry, width int, folds foldSet, formats foldSet, blockCursor int, opts ...renderOpts) renderedPreview {
@@ -466,9 +543,11 @@ func renderFullMessageImpl(e session.Entry, width int, folds foldSet, formats fo
 		ts += "  " + dimStyle.Render("model="+e.Model)
 	}
 
-	nw.WriteString(label + ts + "\n")
-	ruler := max(min(w, 80), 0)
-	nw.WriteString(strings.Repeat("─", ruler) + "\n\n")
+	if !opts.hideHeader {
+		nw.WriteString(label + ts + "\n")
+		ruler := max(min(w, 80), 0)
+		nw.WriteString(strings.Repeat("─", ruler) + "\n\n")
+	}
 
 	blockStarts := make([]int, len(e.Content))
 
