@@ -166,6 +166,7 @@ func main() {
 		tmuxAutoLive bool
 		worktreeDir  string
 		searchQuery  string
+		here         bool
 		groupMode    string
 		previewMode  string
 		viewMode     string
@@ -233,6 +234,7 @@ func main() {
 		flag.BoolVar(&tmuxAutoLive, "tmux-auto-live", false, "auto-enter live session in same tmux window on startup")
 		flag.StringVar(&worktreeDir, "worktree-dir", ".worktree", "subdirectory name for git worktrees")
 		flag.StringVar(&searchQuery, "search", "", "start with session list filtered by search query")
+		flag.BoolVar(&here, "here", false, "start with the session list scoped to the current directory")
 		flag.StringVar(&groupMode, "group", "", "initial group mode (flat|proj|tree|chain|fork)")
 		flag.StringVar(&previewMode, "preview", "", "initial preview mode (conv|stats|mem|tasks)")
 		flag.StringVar(&viewMode, "view", "", "initial view (sessions|config|plugins|stats)")
@@ -306,6 +308,7 @@ func main() {
 		TmuxAutoLive: tmuxAutoLive,
 		WorktreeDir:  worktreeDir,
 		SearchQuery:  searchQuery,
+		ScopeCwd:     here,
 		Keymap:       km,
 		GroupMode:    groupMode,
 		PreviewMode:  previewMode,

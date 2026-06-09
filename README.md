@@ -33,6 +33,7 @@ ccx -view plugins          # start in plugin explorer
 ccx -group tree            # start with tree grouping
 ccx -preview stats         # start with stats preview open
 ccx -search "is:live"      # start filtered to live sessions
+ccx -here                  # scope to sessions in the current directory
 ```
 
 ### `ccx sessions -pick`
@@ -114,13 +115,13 @@ Browse all Claude Code sessions across projects, sorted by recency.
 
 - **Status badges** — at-a-glance session state (see [Session Badges](#session-badges))
 - **Search** (`/`) — filter by project, branch, prompt, window name, or tags
-- **Group modes** (`G` or `:group:*`):
+- **Group modes** (`Tab`/`Shift-Tab` when the list is focused, or `:group:*`):
   - **Flat** — simple list sorted by time
   - **Project** — clustered by project path
   - **Tree** — team hierarchy with leader/teammate nesting
   - **Chain** — resume-chain grouping (parent → child)
   - **Fork** — agent-fork grouping
-- **Directory filter** (`g`) — scope to a single project directory
+- **Current-directory scope** (`.`) — toggle restricting the list to sessions in the current working directory (start scoped with `ccx -here`)
 - **Preview pane** (`Tab` to cycle): conversation, stats, memory, tasks/plan, live
 - **Multi-select** (`Space`) — bulk delete, copy paths, send input
 - **Actions menu** (`x`) — delete, move, resume, copy path, worktree, kill, input, jump, URLs, files

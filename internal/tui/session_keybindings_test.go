@@ -28,10 +28,8 @@ func TestSessionsGGJumpsToTop(t *testing.T) {
 		t.Fatalf("expected at least 3 visible items, got %d", got)
 	}
 	app.sessionList.Select(2)
-	if got := app.sessionList.Index(); got != 2 {
-		t.Fatalf("expected precondition index 2, got %d", got)
-	}
 
+	// First g only arms the pending jump.
 	m, _ := app.handleSessionKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}})
 	app = m.(*App)
 	if app.sessionList.Index() != 2 {
@@ -41,6 +39,7 @@ func TestSessionsGGJumpsToTop(t *testing.T) {
 		t.Fatal("expected pending g after first g")
 	}
 
+	// Second g jumps to top.
 	m, _ = app.handleSessionKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}})
 	app = m.(*App)
 	if app.sessionList.Index() != 0 {
@@ -48,6 +47,55 @@ func TestSessionsGGJumpsToTop(t *testing.T) {
 	}
 	if app.sessPendingG {
 		t.Fatal("pending g should clear after gg")
+	}
+}
+
+func TestSessionsDotTogglesCwdScope(t *testing.T) {
+	app := newSessionKeybindingApp()
+	if got := len(app.sessionList.VisibleItems()); got < 3 {
+		t.Fatalf("expected at least 3 visible items, got %d", got)
+	}
+
+	// Point the package-level cwd at one fake session's project directory. Set
+	// after building the app, since NewApp resets cwdProjectPaths to the real
+	// working directory.
+	saved := cwdProjectPaths
+	cwdProjectPaths = []string{"/tmp/proj-b"}
+	defer func() { cwdProjectPaths = saved }()
+
+	// `.` scopes the list to the current working directory.
+	m, _ := app.handleSessionKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'.'}})
+	app = m.(*App)
+	if !app.sessScopeCwd {
+		t.Fatal("`.` should enable cwd scope")
+	}
+	visible := app.sessionList.VisibleItems()
+	if len(visible) != 1 {
+		t.Fatalf("cwd scope should match exactly the cwd session, got %d items", len(visible))
+	}
+	if si, ok := visible[0].(sessionItem); !ok || si.sess.ProjectPath != "/tmp/proj-b" {
+		t.Fatalf("cwd scope matched the wrong session: %+v", visible[0])
+	}
+
+	// Pressing `.` again clears the scope and restores all sessions.
+	m, _ = app.handleSessionKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'.'}})
+	app = m.(*App)
+	if app.sessScopeCwd {
+		t.Fatal("second `.` should clear cwd scope")
+	}
+	if got := len(app.sessionList.VisibleItems()); got < 3 {
+		t.Fatalf("expected full list restored after clearing scope, got %d items", got)
+	}
+}
+
+func TestSessionsHomeJumpsToTop(t *testing.T) {
+	app := newSessionKeybindingApp()
+	app.sessionList.Select(2)
+
+	m, _ := app.handleSessionKeys(tea.KeyMsg{Type: tea.KeyHome})
+	app = m.(*App)
+	if app.sessionList.Index() != 0 {
+		t.Fatalf("home should jump to top, got index %d", app.sessionList.Index())
 	}
 }
 
@@ -114,7 +162,7 @@ func TestSessionsHelpShowsNavigationAndTabGrouping(t *testing.T) {
 	app.sessSplit.Show = false
 
 	help := stripANSI(app.sessHelpLine())
-	for _, want := range []string{"g/G:top/end", "tab/S-tab:group"} {
+	for _, want := range []string{"g/G:top/end", ".:cwd", "tab/S-tab:group"} {
 		if !strings.Contains(help, want) {
 			t.Fatalf("expected sessions help to contain %q, got %q", want, help)
 		}

@@ -246,6 +246,7 @@ type App struct {
 	lastMsgLoadTime time.Time
 	liveTail        bool // auto-scroll to latest message on tick
 	termFocused     bool // terminal has focus (for Kitty image cleanup)
+	sessScopeCwd    bool // sessions view: when true, list is restricted to the current working directory
 	sessPendingG    bool // sessions view: first 'g' of a possible gg top-jump
 
 	// Mouse state
@@ -580,6 +581,7 @@ type Config struct {
 	TmuxAutoLive bool             // auto-enter live session in same tmux window on startup
 	WorktreeDir  string           // subdirectory name for worktrees (default ".worktree")
 	SearchQuery  string           // initial search filter for session list
+	ScopeCwd     bool             // start with the session list scoped to the current directory
 	Keymap       *Keymap          // nil = use defaults
 	GroupMode    string           // initial group mode (flat|proj|tree|chain|fork)
 	PreviewMode  string           // initial preview mode (conv|stats|mem|tasks|agents|shells|contexts|live)
@@ -600,8 +602,9 @@ func NewApp(sessions []session.Session, cfg Config) *App {
 		cfg.WorktreeDir = ".worktree"
 	}
 
-	// Record the invoker's working directory so the `is:current` filter can
-	// match sessions whose project path is the directory ccx was launched from.
+	// Record the invoker's working directory so the `is:current` filter and the
+	// `.` scope toggle can match sessions whose project path is the directory
+	// ccx was launched from.
 	if wd, err := os.Getwd(); err == nil {
 		cwdProjectPaths = []string{wd}
 	}
@@ -621,6 +624,7 @@ func NewApp(sessions []session.Session, cfg Config) *App {
 		selectedSet:     make(map[string]bool),
 		hiddenBadges:    make(map[string]bool),
 		termFocused:     true,
+		sessScopeCwd:    cfg.ScopeCwd,
 	}
 
 	// Restore persisted view state (CLI flags override in the apply block below)
@@ -938,7 +942,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.width > 0 && a.height > 0 {
 			contentH := a.height - 3
 			sessW := a.sessSplit.ListWidth(a.width, a.splitRatio)
-			a.sessionList = newSessionList(a.sessions, sessW, contentH, a.sessGroupMode, a.selectedSet, a.hiddenBadges, a.config.WorktreeDir)
+			a.sessionList = newSessionList(a.scopedSessions(), sessW, contentH, a.sessGroupMode, a.selectedSet, a.hiddenBadges, a.config.WorktreeDir)
 			a.sessSplit.CacheKey = ""
 			if a.config.SearchQuery != "" {
 				applyListFilter(&a.sessionList, a.config.SearchQuery)
@@ -1658,11 +1662,14 @@ func (a *App) handleSessionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
-	// Sessions list vim-style jumps: gg = top, G = end.
-	// Handle these before TranslateNav so user-configured navigation aliases
-	// cannot reinterpret the first `g` as Home.
+	// Sessions list vim-style jumps: gg = top, G = end. `.` toggles scoping the
+	// list to the current working directory. Handle these before TranslateNav so
+	// user-configured navigation aliases cannot reinterpret the first `g`.
 	if !sp.Focus {
 		switch key {
+		case ".":
+			a.toggleCwdScope()
+			return a, a.schedulePreviewUpdate()
 		case "g":
 			if a.sessPendingG {
 				a.sessPendingG = false
@@ -5740,7 +5747,7 @@ func (a *App) resizeAll() tea.Cmd {
 	sessW := a.sessSplit.ListWidth(a.width, a.splitRatio)
 	if a.sessionList.Width() == 0 {
 		if len(a.sessions) > 0 {
-			a.sessionList = newSessionList(a.sessions, sessW, contentH, a.sessGroupMode, a.selectedSet, a.hiddenBadges, a.config.WorktreeDir)
+			a.sessionList = newSessionList(a.scopedSessions(), sessW, contentH, a.sessGroupMode, a.selectedSet, a.hiddenBadges, a.config.WorktreeDir)
 			a.sessSplit.CacheKey = ""
 			if a.config.SearchQuery != "" {
 				applyListFilter(&a.sessionList, a.config.SearchQuery)
@@ -5829,6 +5836,35 @@ func (a *App) resizeAll() tea.Cmd {
 	return cmd
 }
 
+// toggleCwdScope toggles scoping the session list to the current working
+// directory (the directory ccx was launched from). The list is rebuilt so the
+// change takes effect immediately.
+func (a *App) toggleCwdScope() {
+	a.sessScopeCwd = !a.sessScopeCwd
+	a.rebuildSessionList()
+}
+
+// scopedSessions returns a.sessions filtered to the current working directory
+// when cwd scoping is active; otherwise the full slice is returned unchanged.
+func (a *App) scopedSessions() []session.Session {
+	if !a.sessScopeCwd || len(cwdProjectPaths) == 0 {
+		return a.sessions
+	}
+	want := make(map[string]bool, len(cwdProjectPaths))
+	for _, p := range cwdProjectPaths {
+		if p != "" {
+			want[session.AbsPath(p)] = true
+		}
+	}
+	scoped := make([]session.Session, 0, len(a.sessions))
+	for _, s := range a.sessions {
+		if want[session.AbsPath(s.ProjectPath)] {
+			scoped = append(scoped, s)
+		}
+	}
+	return scoped
+}
+
 func (a *App) rebuildSessionList() {
 	selectedID := ""
 	if sess, ok := a.selectedSession(); ok {
@@ -5843,7 +5879,7 @@ func (a *App) rebuildSessionList() {
 
 	contentH := max(a.height-3, 1)
 	sessW := a.sessSplit.ListWidth(a.width, a.splitRatio)
-	a.sessionList = newSessionList(a.sessions, sessW, contentH, a.sessGroupMode, a.selectedSet, a.hiddenBadges, a.config.WorktreeDir)
+	a.sessionList = newSessionList(a.scopedSessions(), sessW, contentH, a.sessGroupMode, a.selectedSet, a.hiddenBadges, a.config.WorktreeDir)
 	a.sessSplit.CacheKey = ""
 
 	// Reapply filter
@@ -5902,7 +5938,11 @@ func (a *App) renderBreadcrumb() string {
 
 	switch a.state {
 	case viewSessions:
-		crumbs = []crumb{{" Sessions", viewSessions}}
+		label := " Sessions"
+		if a.sessScopeCwd {
+			label += " [cwd]"
+		}
+		crumbs = []crumb{{label, viewSessions}}
 		// Show selected project name in breadcrumb
 		if sess, ok := a.selectedSession(); ok && a.sessionList.Width() > 0 {
 			proj := sess.ProjectName
