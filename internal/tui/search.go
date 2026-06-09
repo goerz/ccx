@@ -91,15 +91,6 @@ func (a *App) executeSearch() tea.Cmd {
 	return func() tea.Msg {
 		results := session.SearchSessions(sessions, parsed, ctx)
 
-		go func() {
-			for result := range results {
-				// Send each result as a message (will be batched by tea runtime)
-				// This is a simplified approach - in production you'd batch these
-				_ = result
-			}
-		}()
-
-		// Collect all results synchronously for simplicity
 		var allResults []session.SearchResult
 		for result := range results {
 			allResults = append(allResults, result)
