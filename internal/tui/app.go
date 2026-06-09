@@ -2046,7 +2046,15 @@ func (a *App) handleConvPreviewKeys(sp *SplitPane, key string) (tea.Model, tea.C
 		}
 		return a, nil, true
 	case "f":
-		a.sessConvExpanded = nil
+		// Toggle: fold all when anything is expanded, otherwise unfold all.
+		if len(a.sessConvExpanded) > 0 {
+			a.sessConvExpanded = nil
+		} else {
+			a.sessConvExpanded = make(map[int]bool, len(visible))
+			for i := range visible {
+				a.sessConvExpanded[i] = true
+			}
+		}
 		a.refreshConvPreview()
 		return a, nil, true
 	case "F":
