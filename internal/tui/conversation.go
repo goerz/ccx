@@ -3188,11 +3188,17 @@ func (a *App) openAgentConversation(agent session.Subagent) (tea.Model, tea.Cmd)
 
 // openConvAsText exports the conversation as plain text and opens it in $EDITOR.
 func (a *App) openConvAsText() (tea.Model, tea.Cmd) {
-	if len(a.conv.merged) == 0 {
+	// In the session view the conversation lives in the preview (sessConvEntries);
+	// a.conv.merged is only populated once a conversation is opened with Enter.
+	merged := a.conv.merged
+	if a.state == viewSessions {
+		merged = a.sessConvEntries
+	}
+	if len(merged) == 0 {
 		a.copiedMsg = "No messages"
 		return a, nil
 	}
-	content := stripANSI(renderAllMessages(a.conv.merged, 80))
+	content := stripANSI(renderAllMessages(merged, 80))
 	tmpFile, err := os.CreateTemp("", "ccx-conv-*.txt")
 	if err != nil {
 		a.copiedMsg = "Error: " + err.Error()
