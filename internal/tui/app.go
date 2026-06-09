@@ -600,6 +600,12 @@ func NewApp(sessions []session.Session, cfg Config) *App {
 		cfg.WorktreeDir = ".worktree"
 	}
 
+	// Record the invoker's working directory so the `is:current` filter can
+	// match sessions whose project path is the directory ccx was launched from.
+	if wd, err := os.Getwd(); err == nil {
+		cwdProjectPaths = []string{wd}
+	}
+
 	km := DefaultKeymap()
 	if cfg.Keymap != nil {
 		km = *cfg.Keymap

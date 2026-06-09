@@ -117,8 +117,13 @@ type sessionItem struct {
 	treeLast  bool // last child in group (└─ vs ├─)
 }
 
+// cwdProjectPaths holds the project directories that count as "current" for the
+// `is:current` search filter — the directory ccx was launched from. It is set
+// once in NewApp and read here when building each item's filter tokens.
+var cwdProjectPaths []string
+
 func (s sessionItem) FilterValue() string {
-	return session.FilterValueFor(s.sess, nil)
+	return session.FilterValueFor(s.sess, cwdProjectPaths)
 }
 
 // headerSentinel is returned by headerItem.FilterValue so headers never match a

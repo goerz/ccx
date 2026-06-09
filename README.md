@@ -145,7 +145,7 @@ Browse all Claude Code sessions across projects, sorted by recency.
 | `has:mcp` | Used MCP tools |
 | `team:NAME` | Filter by team name |
 | `win:NAME` | Filter by tmux window name |
-| `is:current` | Session's project path matches invoker cwd or tmux-window Claude process |
+| `is:current` | Session's project path matches the directory ccx was launched from (cwd) |
 
 Plain text terms match against project path, name, branch, session ID, first prompt, and teammate name. Multiple terms are AND-matched.
 

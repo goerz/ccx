@@ -12,6 +12,9 @@ func newSessionKeybindingApp() *App {
 	app.sessionsLoading = false
 	app.sessSplit.Show = false
 	app.sessSplit.Focus = false
+	// Clear any persisted startup search query so rebuilds don't re-filter the
+	// list out from under the test.
+	app.config.SearchQuery = ""
 	contentH := ContentHeight(app.height)
 	app.sessionList = newSessionList(app.sessions, app.sessSplit.ListWidth(app.width, app.splitRatio), contentH, app.sessGroupMode, app.selectedSet, app.hiddenBadges, app.config.WorktreeDir)
 	app.sessionList.ResetFilter()
@@ -81,6 +84,28 @@ func TestSessionsSpaceDoesNotSelectWhenPreviewFocused(t *testing.T) {
 	app = m.(*App)
 	if app.hasMultiSelection() {
 		t.Fatalf("space in focused preview should not multi-select session, got %v", app.selectedSet)
+	}
+}
+
+func TestSessionsIsCurrentFilterMatchesCwd(t *testing.T) {
+	app := newSessionKeybindingApp()
+
+	// Point the package-level cwd at one fake session's project directory. Set
+	// after building the app, since NewApp resets cwdProjectPaths to the real
+	// working directory. FilterValue reads this at filter time.
+	saved := cwdProjectPaths
+	cwdProjectPaths = []string{"/tmp/proj-b"}
+	defer func() { cwdProjectPaths = saved }()
+
+	applyListFilter(&app.sessionList, "is:current")
+
+	visible := app.sessionList.VisibleItems()
+	if len(visible) != 1 {
+		t.Fatalf("is:current should match exactly the cwd session, got %d items", len(visible))
+	}
+	si, ok := visible[0].(sessionItem)
+	if !ok || si.sess.ProjectPath != "/tmp/proj-b" {
+		t.Fatalf("is:current matched the wrong session: %+v", visible[0])
 	}
 }
 
