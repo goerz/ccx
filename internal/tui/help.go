@@ -93,7 +93,14 @@ func (a *App) sessHelpLine() string {
 	if sc := a.shortcutHint(); sc != "" {
 		h += " " + dimStyle.Render(sc)
 	}
-	h += " " + fmtKey(sk.Search, "search") + " " + fmtKey(sk.Help, "help") + " " + fmtKey(sk.Quit, "quit")
+	// In the focused conversation preview, `f` folds (search is shown above as
+	// `/:search`); elsewhere `f` filters the list and `/` searches.
+	if a.sessSplit.Show && a.sessSplit.Focus && a.sessPreviewMode == sessPreviewConversation {
+		h += " " + fmtKey(sk.Filter, "fold")
+	} else {
+		h += " " + fmtKey(sk.Filter, "filter") + " " + fmtKey(sk.Search, "search")
+	}
+	h += " " + fmtKey(sk.Help, "help") + " " + fmtKey(sk.Quit, "quit")
 	return formatHelp(h)
 }
 

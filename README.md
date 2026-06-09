@@ -47,7 +47,7 @@ To confirm a pick, press `P`. Navigate with arrows, multi-select with `space`, f
 sid=$(ccx sessions -pick | jq -r '.sessions[0].id')
 claude --resume "$sid"
 
-# narrow with filter query (same syntax as TUI /)
+# narrow with filter query (same syntax as the TUI `f` filter)
 ccx sessions -pick -search "is:current is:live"
 
 # multi-select
@@ -58,7 +58,7 @@ ccx sessions -pick -multi | jq '.sessions | length'
 
 | Flag | Description |
 |------|-------------|
-| `-search STR` | Initial filter query (same syntax as TUI `/` search) |
+| `-search STR` | Initial filter query (same syntax as the TUI `f` filter) |
 | `-multi` | Allow multi-selection (space to toggle, `P` to confirm) |
 | `-dir PATH` | Claude data directory (default: `~/.claude`) |
 
@@ -114,7 +114,8 @@ The color scheme is resolved in order: `-theme` flag → `theme` in config → `
 Browse all Claude Code sessions across projects, sorted by recency.
 
 - **Status badges** — at-a-glance session state (see [Session Badges](#session-badges))
-- **Search** (`/`) — filter by project, branch, prompt, window name, or tags
+- **Cross-session search** (`/`) — full-text search across all session contents
+- **Filter** (`f`) — narrow the visible list by project, branch, prompt, window name, tags, or `is:`/`has:` tokens
 - **Group modes** (`Tab`/`Shift-Tab` when the list is focused, or `:group:*`):
   - **Flat** — simple list sorted by time
   - **Project** — clustered by project path
@@ -175,7 +176,7 @@ Example: `[HERE][LIVE][WAIT] my-feature` — current window, live process, idle 
 
 ### Cross-Session Search
 
-Search inside conversation content across all sessions (`Ctrl+S` or `:search`).
+Search inside conversation content across all sessions (`/` or `:search`).
 
 **Search syntax:**
 - `word1 word2` — AND match (all terms must appear)
@@ -327,7 +328,8 @@ Multi-select plugin components and press `t` to launch an isolated Claude sessio
 | Key | Action |
 |-----|--------|
 | `Enter` | Open conversation view |
-| `/` | Search/filter sessions |
+| `/` | Cross-session content search (search inside all transcripts) |
+| `f` | Filter the list (path, name, prompt, `is:`/`has:` tokens) |
 | `g` | Filter by project directory |
 | `G` | Cycle group mode |
 | `Tab` | Cycle preview mode |
@@ -340,7 +342,6 @@ Multi-select plugin components and press `t` to launch an isolated Claude sessio
 | `x` | Actions menu (delete, move, resume, fork, URLs, files, ...) |
 | `v` | Views menu (stats/config/plugins) |
 | `:` | Command mode |
-| `Ctrl+S` | Cross-session search |
 | `L` | Live preview (tmux) |
 | `I` | Send input to live session |
 | `J` | Jump to tmux pane |

@@ -43,15 +43,56 @@ func configureListSearch(l *list.Model) {
 	)
 }
 
-// startListSearch activates the search prompt.
+// setListFilterKey overrides which key opens the list's filter prompt. The
+// bubbles default is "/"; the session list uses "f" so that "/" is free for
+// cross-session content search.
+//
+// The bubbles default NextPage binding includes "f" (["right" "l" "pgdown" "f"
+// "d"]) and is matched before Filter in handleBrowsing, so "f" would page the
+// list instead of filtering. Drop "f" from NextPage to free it; paging still
+// works via →/l/pgdn/d.
+func setListFilterKey(l *list.Model, keyStr string) {
+	l.KeyMap.Filter = key.NewBinding(
+		key.WithKeys(keyStr),
+		key.WithHelp(keyStr, "filter"),
+	)
+	next := filterOut(l.KeyMap.NextPage.Keys(), keyStr)
+	l.KeyMap.NextPage = key.NewBinding(
+		key.WithKeys(next...),
+		key.WithHelp("→/l/pgdn", "next page"),
+	)
+	prev := filterOut(l.KeyMap.PrevPage.Keys(), keyStr)
+	l.KeyMap.PrevPage = key.NewBinding(
+		key.WithKeys(prev...),
+		key.WithHelp("←/h/pgup", "prev page"),
+	)
+}
+
+// filterOut returns keys with any occurrence of drop removed.
+func filterOut(keys []string, drop string) []string {
+	out := keys[:0:0]
+	for _, k := range keys {
+		if k != drop {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
+// startListSearch activates the filter prompt.
 // The filter input is rendered in the help line (not in the list header) so
 // that list items stay at a stable position.
 func startListSearch(l *list.Model) tea.Cmd {
 	if l.Width() == 0 {
 		return nil
 	}
-	// Simulate "/" to open filter — must assign back because Update is a value receiver
-	openMsg := tea.KeyMsg(tea.Key{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	// Simulate the list's filter key to open the prompt — must assign back
+	// because Update is a value receiver.
+	filterKey := "/"
+	if keys := l.KeyMap.Filter.Keys(); len(keys) > 0 {
+		filterKey = keys[0]
+	}
+	openMsg := tea.KeyMsg(tea.Key{Type: tea.KeyRunes, Runes: []rune(filterKey)})
 	newL, cmd := l.Update(openMsg)
 	*l = newL
 	return cmd

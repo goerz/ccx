@@ -158,8 +158,8 @@ func fillKeymapDefaults(cfg *CCXConfig, d Keymap) {
 	if s.Search == "" {
 		s.Search = d.Session.Search
 	}
-	if s.GlobalSearch == "" {
-		s.GlobalSearch = d.Session.GlobalSearch
+	if s.Filter == "" {
+		s.Filter = d.Session.Filter
 	}
 	if s.Live == "" {
 		s.Live = d.Session.Live

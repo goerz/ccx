@@ -1358,7 +1358,11 @@ func (a *App) View() string {
 	// Override help with filter input when filtering; hints float above
 	if a.isFiltering() {
 		val := a.activeFilterValue()
-		prompt := helpKeyStyle.Render("Search: ") + val + blockCursorStyle.Render("▏")
+		filterLabel := "Search: "
+		if a.state == viewSessions {
+			filterLabel = "Filter: "
+		}
+		prompt := helpKeyStyle.Render(filterLabel) + val + blockCursorStyle.Render("▏")
 		help = "  " + prompt + helpStyle.Render("  (space=AND) enter:apply esc:cancel")
 		// Float hint box above the help line
 		hintBox := a.renderSearchHintBox()
@@ -1636,9 +1640,6 @@ func (a *App) handleSessionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case km.Session.Views:
 		a.viewsMenu = true
 		return a, nil
-	case km.Session.GlobalSearch:
-		a.enterSearchMode()
-		return a, nil
 	case km.Session.Help:
 		a.showHelp = true
 		return a, nil
@@ -1729,6 +1730,13 @@ func (a *App) handleSessionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m, cmd, handled := a.handleFocusedPreviewKeys(sp, key); handled {
 			return m, cmd
 		}
+	}
+
+	// `/` opens cross-session content search when the list is focused.
+	// (When a preview is focused, the preview handlers own `/`.)
+	if !sp.Focus && key == km.Session.Search {
+		a.enterSearchMode()
+		return a, nil
 	}
 
 	// List boundary (up/down always navigate list, scroll preview at edges)
@@ -1829,9 +1837,12 @@ func (a *App) handleFocusedPreviewKeys(sp *SplitPane, key string) (tea.Model, te
 		return a.handleTasksPreviewKeys(sp, key)
 	}
 	switch key {
-	case "/":
+	case "f":
 		sp.Focus = false
 		return a, startListSearch(&a.sessionList), true
+	case "/":
+		a.enterSearchMode()
+		return a, nil, true
 	case "up", "down", "pgdown", "pgup", "home", "end":
 		scrollPreview(&sp.Preview, key)
 		a.sessPreviewPinned = !a.sessPreviewAtBottom()
@@ -1845,9 +1856,12 @@ func (a *App) handleTasksPreviewKeys(sp *SplitPane, key string) (tea.Model, tea.
 	switch key {
 	case "enter":
 		return a.jumpToAgentConversation()
-	case "/":
+	case "f":
 		sp.Focus = false
 		return a, startListSearch(&a.sessionList), true
+	case "/":
+		a.enterSearchMode()
+		return a, nil, true
 	}
 	// Flat cursor navigation over agents
 	switch HandleFlatCursorNav(&a.sessAgentCursor, len(a.sessPreviewAgents), key) {

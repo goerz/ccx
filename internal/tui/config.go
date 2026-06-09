@@ -180,7 +180,7 @@ func (a *App) keymapConfigItems() []session.ConfigItem {
 		{"session", []kv{
 			{"quit", km.Session.Quit}, {"open", km.Session.Open}, {"edit", km.Session.Edit},
 			{"actions", km.Session.Actions}, {"views", km.Session.Views}, {"refresh", km.Session.Refresh},
-			{"search", km.Session.Search}, {"global_search", km.Session.GlobalSearch},
+			{"search", km.Session.Search}, {"filter", km.Session.Filter},
 			{"live", km.Session.Live}, {"select", km.Session.Select},
 			{"preview", km.Session.Preview}, {"preview_back", km.Session.PreviewBack},
 			{"command", km.Session.Command}, {"help", km.Session.Help},

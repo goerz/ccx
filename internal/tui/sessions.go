@@ -407,6 +407,7 @@ func newSessionList(sessions []session.Session, width, height int, groupMode int
 	}
 	l.Filter = wrapPinCurrentWindow(items, base)
 	configureListSearch(&l)
+	setListFilterKey(&l, "f") // "/" is reserved for cross-session search
 	l.SetSize(width, height) // re-compute pagination after hiding bars
 	return l
 }
@@ -1034,8 +1035,9 @@ func renderHelpModal(bg string, screenW, screenH int, km Keymap, shortcutHint st
 		}
 	}
 
-	// Search filters: two-column layout
-	sb.WriteString("\n" + headerStyle.Render(" Search Filters") + "\n")
+	// Filter tokens: two-column layout
+	sb.WriteString("\n" + headerStyle.Render(" Filter tokens") + "\n")
+	sb.WriteString(" " + d.Render("Type after "+displayKey(km.Session.Filter)+" to filter the list (e.g. "+displayKey(km.Session.Filter)+"is:busy):") + "\n")
 	type filter struct{ filter, desc string }
 	allFilters := []filter{
 		{"is:here", "In current window"},
@@ -1080,7 +1082,8 @@ func renderHelpModal(bg string, screenW, screenH int, km Keymap, shortcutHint st
 		{displayKey(sk.Escape) + " / " + displayKey(sk.Left), "Back / close"},
 		{displayKey(sk.Edit), "Edit session files"},
 		{displayKey(sk.Actions), "Actions (" + displayKey(km.Actions.Delete) + "/" + displayKey(km.Actions.Move) + "/" + displayKey(km.Actions.Resume) + "/" + displayKey(km.Actions.CopyPath) + "/" + displayKey(km.Actions.Worktree) + "/" + displayKey(km.Actions.Kill) + "/" + displayKey(km.Actions.Input) + "/" + displayKey(km.Actions.Jump) + ")"},
-		{displayKey(sk.Search), "Search / filter"},
+		{displayKey(sk.Filter), "Filter list (path, name, is:/has: tokens)"},
+		{displayKey(sk.Search), "Search across all session contents"},
 		{displayKey(sk.Group), "Group (flat→proj→tree→chain)"},
 		{displayKey(km.Views.Stats), "Global stats"},
 		{displayKey(sk.Refresh), "Refresh list"},
