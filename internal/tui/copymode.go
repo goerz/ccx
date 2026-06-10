@@ -100,11 +100,20 @@ func (a *App) handleCopyModeKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		key = nav
 	}
 
+	copyModeKey := a.keymap.Preview.CopyMode
+	if copyModeKey == "" {
+		copyModeKey = "v"
+	}
+	copyAllKey := a.keymap.Preview.CopyAll
+	if copyAllKey == "" {
+		copyAllKey = "y"
+	}
+
 	switch key {
 	case "esc":
 		a.exitCopyMode()
 		return a, nil
-	case "v", " ":
+	case copyModeKey, " ":
 		if a.copyAnchor == -1 {
 			a.copyAnchor = a.copyCursor
 		} else {
@@ -146,7 +155,7 @@ func (a *App) handleCopyModeKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.ensureCursorVisible(vp)
 		a.renderCopyMode()
 		return a, nil
-	case "y", "enter":
+	case copyAllKey, "enter":
 		a.doCopySelection()
 		a.exitCopyMode()
 		return a, nil

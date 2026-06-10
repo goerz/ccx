@@ -84,6 +84,7 @@ func (a *App) navToMsgFull(idx int) {
 
 	a.msgFull.folds = FoldState{}
 	a.msgFull.folds.Reset(entry)
+	a.msgFull.folds.applyPreviewKeys(a.keymap)
 
 	contentH := ContentHeight(a.height)
 	content := renderFullMessage(entry, a.width)

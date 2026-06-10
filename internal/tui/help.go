@@ -107,6 +107,9 @@ func (a *App) sessHelpLine() string {
 // --- Conversation view help ---
 
 func (a *App) convHelpLine(badges string) string {
+	if a.showHelp {
+		return formatHelp("press any key to close")
+	}
 	if a.conv.blockFiltering {
 		return "  " + a.conv.blockFilterTI.View() + helpStyle.Render("  enter:apply esc:cancel")
 	}
@@ -134,9 +137,9 @@ func (a *App) convHelpLine(badges string) string {
 		vis := countVisibleBlocks(sp.Folds.BlockVisible)
 		total := len(sp.Folds.Entry.Content)
 		filterInfo := filterBadge.Render(fmt.Sprintf(" [%d/%d] %s", vis, total, sp.Folds.BlockFilter))
-		return filterInfo + " " + badges + formatHelp(joinHelpSections(h, "/:search", "esc:back", "q:quit"))
+		return filterInfo + " " + badges + formatHelp(joinHelpSections(h, "/:search", fmtKey(a.keymap.Session.Help, "help"), "esc:back", "q:quit"))
 	}
-	return badges + formatHelp(joinHelpSections(h, "/:search", "esc:back", "q:quit"))
+	return badges + formatHelp(joinHelpSections(h, "/:search", fmtKey(a.keymap.Session.Help, "help"), "esc:back", "q:quit"))
 }
 
 // --- Config view help ---

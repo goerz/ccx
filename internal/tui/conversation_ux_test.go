@@ -747,6 +747,30 @@ func TestResizePreservesCacheKey(t *testing.T) {
 
 // --- Group 4: Focus and Split Pane ---
 
+func TestConversationHelpToggle(t *testing.T) {
+	app := setupConvApp(t, testEntries(), 160, 50)
+
+	// `?` opens the help overlay.
+	app = pressKey(app, "?")
+	if !app.showHelp {
+		t.Fatal("`?` should open the conversation help overlay")
+	}
+
+	// The overlay lists keybindings grouped by context.
+	view := stripANSI(app.View())
+	for _, want := range []string{"Conversation Help", "Navigation", "Preview", "Actions"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("help overlay should contain %q", want)
+		}
+	}
+
+	// Any key closes it.
+	app = pressKey(app, "j")
+	if app.showHelp {
+		t.Fatal("any key should close the conversation help overlay")
+	}
+}
+
 func TestRightKeyOpensSplitPane(t *testing.T) {
 	app := setupConvApp(t, testEntries(), 160, 50)
 	app.conv.split.Show = false

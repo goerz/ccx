@@ -1095,7 +1095,14 @@ func renderHelpModal(bg string, screenW, screenH int, km Keymap, shortcutHint st
 		sb.WriteString(" " + d.Render(shortcutHint) + "\n")
 	}
 
-	body := strings.TrimRight(sb.String(), "\n")
+	return helpModalFrame(bg, sb.String(), screenW, screenH)
+}
+
+// helpModalFrame wraps pre-rendered help body text in the standard centered,
+// bordered help modal and overlays it on bg. Body content taller than the
+// screen is truncated to fit.
+func helpModalFrame(bg, body string, screenW, screenH int) string {
+	body = strings.TrimRight(body, "\n")
 	bodyLines := strings.Split(body, "\n")
 
 	// Modal dimensions: fit content with padding, capped to screen
@@ -1106,8 +1113,10 @@ func renderHelpModal(bg string, screenW, screenH int, km Keymap, shortcutHint st
 	modalH := len(bodyLines) + 2 // +2 for top/bottom border
 	if modalH > screenH-2 {
 		modalH = screenH - 2
-		bodyLines = bodyLines[:modalH-2]
-		body = strings.Join(bodyLines, "\n")
+		if n := modalH - 2; n >= 0 && n < len(bodyLines) {
+			bodyLines = bodyLines[:n]
+			body = strings.Join(bodyLines, "\n")
+		}
 	}
 
 	modalStyle := lipgloss.NewStyle().
@@ -1116,9 +1125,73 @@ func renderHelpModal(bg string, screenW, screenH int, km Keymap, shortcutHint st
 		Width(modalW).
 		Padding(0, 1)
 
-	modal := modalStyle.Render(body)
+	return overlayCenter(bg, modalStyle.Render(body), screenW, screenH)
+}
 
-	return overlayCenter(bg, modal, screenW, screenH)
+// renderConvHelpModal renders a help modal listing all conversation-view
+// keybindings, grouped by context, overlaid on bg.
+func renderConvHelpModal(bg string, screenW, screenH int, km Keymap) string {
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(colorPrimary)
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(colorAccent)
+	d := dimStyle
+
+	var sb strings.Builder
+	sb.WriteString(titleStyle.Render(" ccx — Conversation Help") + "\n\n")
+
+	section := func(name string, keys [][2]string) {
+		sb.WriteString(headerStyle.Render(" "+name) + "\n")
+		for _, k := range keys {
+			sb.WriteString(fmt.Sprintf(" %-13s %s\n", k[0], d.Render(k[1])))
+		}
+		sb.WriteString("\n")
+	}
+
+	ck := km.Conversation
+	sk := km.Session
+	pk := km.Preview
+
+	section("Navigation", [][2]string{
+		{displayKey("up") + "/" + displayKey("down"), "Move cursor / preview blocks"},
+		{displayKey("left") + "/" + displayKey("right"), "Fold · focus preview · back"},
+		{"g / G", "Top / bottom"},
+		{"pgup/pgdn", "Page up / down"},
+		{displayKey(sk.Preview) + "/" + displayKey(sk.PreviewBack), "Toggle flat/tree · cycle detail"},
+	})
+
+	section("List (left pane)", [][2]string{
+		{displayKey(sk.Open), "Open message · drill into agent/task"},
+		{displayKey(ck.JumpToTree), "Jump to tree / origin / tmux pane"},
+		{displayKey(ck.Edit), "Edit session files"},
+		{"p", "Artifact browser (todos/files/images…)"},
+		{displayKey(sk.Search), "Search messages"},
+	})
+
+	section("Preview (right pane)", [][2]string{
+		{displayKey(pk.FoldAll) + " / " + displayKey(pk.ExpandAll), "Fold all / expand all"},
+		{displayKey("left") + "/" + displayKey("right"), "Fold / unfold block"},
+		{displayKey(" "), "Select block"},
+		{displayKey(pk.CopyMode), "Enter copy mode (text preview)"},
+		{displayKey(pk.CopyAll) + "/" + displayKey("enter"), "Copy selection (in copy mode)"},
+		{displayKey(pk.Filter), "Filter / search blocks"},
+		{displayKey(sk.ResizeShrink) + displayKey(sk.ResizeGrow), "Resize panes"},
+	})
+
+	section("Actions", [][2]string{
+		{displayKey(ck.Actions), "Actions menu (urls/files/changes/copy)"},
+		{displayKey(ck.LiveToggle), "Toggle live tail"},
+		{displayKey(ck.Input), "Send input to live session (tmux)"},
+		{"i", "Open image"},
+		{"t", "Toggle tooltips"},
+	})
+
+	section("General", [][2]string{
+		{displayKey(sk.Help), "This help"},
+		{displayKey(sk.Refresh), "Refresh"},
+		{displayKey(sk.Escape), "Back · close preview · clear filter"},
+		{displayKey(sk.Quit), "Quit"},
+	})
+
+	return helpModalFrame(bg, sb.String(), screenW, screenH)
 }
 
 // renderFullTextModal renders a scrollable modal showing the full text of a

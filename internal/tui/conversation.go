@@ -212,6 +212,12 @@ func (a *App) handleConversationKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	sp := &a.conv.split
 	key := msg.String()
 
+	// Help overlay: any key closes it
+	if a.showHelp {
+		a.showHelp = false
+		return a, nil
+	}
+
 	// Artifact page actions menu
 	if a.convPageActionsMenu {
 		a.convPageActionsMenu = false
@@ -588,6 +594,9 @@ func (a *App) handleConversationKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "p":
 		a.convPageMenu = true
 		return a, nil
+	case a.keymap.Session.Help:
+		a.showHelp = true
+		return a, nil
 	}
 
 	// Tab/shift+tab act on the focused pane: left toggles flat/tree, right cycles compact/standard/verbose.
@@ -662,7 +671,7 @@ func (a *App) handleConversationKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return a, nil
 			}
 		}
-		result = sp.HandleFocusedKeys(key)
+		result = sp.HandleFocusedKeys(key, a.keymap.Preview.Filter)
 		switch result {
 		case splitKeySearchFromPreview:
 			if a.conv.rightPaneMode != previewText {
@@ -3238,6 +3247,7 @@ func (a *App) openFullConversation() (tea.Model, tea.Cmd) {
 	a.msgFull.content = content
 	a.msgFull.allMessages = true
 	a.msgFull.folds = FoldState{}
+	a.msgFull.folds.applyPreviewKeys(a.keymap)
 
 	a.msgFull.vp = viewport.New(a.width, contentH)
 	a.msgFull.vp.SetContent(content)

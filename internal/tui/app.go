@@ -640,7 +640,7 @@ func NewApp(sessions []session.Session, cfg Config) *App {
 	cleanupStaleRemoteSessions()
 	a.sessions = append(loadSavedRemoteSessions(), a.sessions...)
 	a.sessSplit = SplitPane{List: &a.sessionList, ItemHeight: 2}
-	a.conv.split = SplitPane{List: &a.convList, Show: true, Folds: &FoldState{}, ItemHeight: 1}
+	a.conv.split = SplitPane{List: &a.convList, Show: true, Folds: &FoldState{FoldAllKey: km.Preview.FoldAll, ExpandAllKey: km.Preview.ExpandAll}, ItemHeight: 1}
 	a.cfgSplit = SplitPane{List: &a.cfgList, ItemHeight: 1}
 	a.plgSplit = SplitPane{List: &a.plgList, ItemHeight: 1}
 	a.plgDetailSplit = SplitPane{List: &a.plgDetailList, ItemHeight: 1}
@@ -1161,6 +1161,9 @@ func (a *App) View() string {
 	case viewConversation:
 		title = a.renderBreadcrumb()
 		content = a.renderConvSplit()
+		if a.showHelp {
+			content = renderConvHelpModal(content, a.width, ContentHeight(a.height), a.keymap)
+		}
 		badges := ""
 		if a.liveTail {
 			badgeStyle := liveBadge
@@ -2024,9 +2027,6 @@ func (a *App) handleConvPreviewKeys(sp *SplitPane, key string) (tea.Model, tea.C
 		}
 		a.actionsMenu = true
 		return a, nil, true
-	case a.keymap.Actions.Copy:
-		a.copySessionPreviewSelection()
-		return a, nil, true
 	case "enter":
 		m, cmd := a.jumpToConvMessage()
 		return m, cmd, true
@@ -2790,7 +2790,7 @@ func (a *App) handleActionsMenu(key string) (tea.Model, tea.Cmd) {
 		case "f":
 			visible := a.convVisibleEntries()
 			return a.openSessionPreviewFullText(visible), nil
-		case "y", a.keymap.Actions.Copy:
+		case "y":
 			a.copySessionPreviewSelection()
 			return a, nil
 		}

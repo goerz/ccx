@@ -54,6 +54,17 @@ type FoldState struct {
 	HideHooks      bool    // true = suppress hook badges/details in render
 	Selected       foldSet // block indices selected for copy
 	BlockSourceIdx []int   // parallel to Entry.Content; -1 = unknown source
+
+	// Configurable keys (from keymap.Preview). Empty falls back to "f"/"F".
+	FoldAllKey   string
+	ExpandAllKey string
+}
+
+// applyPreviewKeys stamps the configurable fold/expand keys onto fs so that
+// HandleKey honors keymap.Preview overrides instead of the hardcoded defaults.
+func (fs *FoldState) applyPreviewKeys(km Keymap) {
+	fs.FoldAllKey = km.Preview.FoldAll
+	fs.ExpandAllKey = km.Preview.ExpandAll
 }
 
 // ListWidth returns the list width given total width and split ratio.
@@ -331,12 +342,15 @@ func (sp *SplitPane) HandlePreviewScroll(key string) bool {
 }
 
 // HandleFocusedKeys processes keys when the preview pane is focused:
-// "/" to start search, fold navigation, and scroll keys.
-func (sp *SplitPane) HandleFocusedKeys(key string) SplitKeyResult {
+// filterKey to start search/filter, fold navigation, and scroll keys.
+func (sp *SplitPane) HandleFocusedKeys(key, filterKey string) SplitKeyResult {
 	if !sp.Focus || !sp.Show {
 		return splitKeyUnhandled
 	}
-	if key == "/" {
+	if filterKey == "" {
+		filterKey = "/"
+	}
+	if key == filterKey {
 		sp.Focus = false
 		return splitKeySearchFromPreview
 	}
@@ -737,11 +751,24 @@ func (fs *FoldState) HandleKey(key string) foldResult {
 			fs.BlockCursor = next
 		}
 		return foldHandled
-	case "f":
+	}
+
+	// Fold-all / expand-all are configurable (keymap.Preview). Checked after the
+	// fixed navigation keys above so a custom binding can't shadow them.
+	foldAll := fs.FoldAllKey
+	if foldAll == "" {
+		foldAll = "f"
+	}
+	expandAll := fs.ExpandAllKey
+	if expandAll == "" {
+		expandAll = "F"
+	}
+	switch key {
+	case foldAll:
 		fs.Collapsed = defaultFolds(fs.Entry)
 		fs.Formatted = nil
 		return foldHandled
-	case "F":
+	case expandAll:
 		fs.Collapsed = make(foldSet)
 		fs.Formatted = nil
 		return foldHandled
