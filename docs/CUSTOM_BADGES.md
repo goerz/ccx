@@ -190,7 +190,6 @@ User types: tag:urgent
 
 **Limits:**
 - Max 10 badges per session
-- Max 100 unique badges globally
 
 ### Persistence
 

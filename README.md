@@ -10,18 +10,21 @@ Browse sessions, read conversations, inspect tool calls, view agent hierarchies,
 
 ## Install
 
-```bash
-go install github.com/sendbird/ccx@latest
-```
-
-Or build from source:
+This program is best installed from source:
 
 ```bash
-git clone https://github.com/sendbird/ccx.git
+git clone https://github.com/goerz/ccx.git
 cd ccx
 make build      # -> bin/ccx
 make install    # -> ~/.local/bin/ccx
 ```
+
+Or, install into `~/go/bin/ccx`
+
+```bash
+go install github.com/goerz/ccx@latest
+```
+
 
 ## Usage
 
@@ -98,6 +101,8 @@ ccx sessions -pick -multi | jq '.sessions | length'
 | `-group MODE` | Initial grouping: `flat`, `proj`, `tree`, `chain`, `fork` |
 | `-preview MODE` | Initial preview: `conv`, `stats`, `mem`, `tasks` |
 | `-search QUERY` | Start with session filter applied |
+| `-session ID` | Open a specific session by ID (prefix match) |
+| `-here` | Scope the list to sessions in the current directory |
 | `-tmux` | Enable tmux integration (auto-detected) |
 | `-tmux-auto-live` | Auto-enter live session in same tmux window |
 | `-worktree-dir NAME` | Worktree subdirectory name (default: `.worktree`) |
@@ -109,9 +114,27 @@ The color scheme is resolved in order: `-theme` flag → `theme` in config → `
 
 ## Views
 
+ccx is organized into a handful of top-level **views** — the Session Browser, Conversation, Detail, Global Stats, Config Explorer, and Plugin Explorer. You switch between them with the keys noted in each section below; `Esc` returns to the previous view.
+
+### Split panes and the preview
+
+Most views are a **split pane**: a scrollable **list** on the left and a **preview pane** on the right. The preview pane is part of the current view — opening it does *not* switch views.
+
+The preview pane has three states, driven entirely by the arrow keys:
+
+| State | How to reach it | Keys act on |
+|-------|-----------------|-------------|
+| **Closed** | starting state; `←` again with the list focused | the list |
+| **Open, list focused** | `→` once | the list (the preview just follows the cursor) |
+| **Open, preview focused** | `→` again | the preview pane |
+
+`←` reverses the sequence: it unfocuses the preview, then closes it, then (in the Conversation view) steps back a level. So in the Session Browser, pressing `→` once opens the preview beside the list; a second `→` moves focus *into* it.
+
+Which side is focused changes what many keys do — for example, in the Session Browser `Tab` cycles the **group mode** when the list is focused and the **preview mode** when the preview is focused, and the `1`–`9` [number shortcuts](#number-key-shortcuts) are scoped to the focused side. `[` and `]` adjust the split ratio.
+
 ### Session Browser
 
-Browse all Claude Code sessions across projects, sorted by recency.
+The default view ccx opens to. Browse all Claude Code sessions across projects, sorted by recency.
 
 - **Status badges** — at-a-glance session state (see [Session Badges](#session-badges))
 - **Cross-session search** (`/`) — full-text search across all session contents
@@ -122,21 +145,29 @@ Browse all Claude Code sessions across projects, sorted by recency.
   - **Tree** — team hierarchy with leader/teammate nesting
   - **Chain** — resume-chain grouping (parent → child)
   - **Fork** — agent-fork grouping
+  - **Repo** — clustered by base git repository
 - **Current-directory scope** (`.`) — toggle restricting the list to sessions in the current working directory (start scoped with `ccx -here`)
-- **Preview pane** (`Tab` to cycle): conversation, stats, memory, tasks/plan, live
+- **Preview pane** (`→`, see [Split panes and the preview](#split-panes-and-the-preview)) — `Tab`/`Shift-Tab` (or `:preview:*`) cycles the preview mode: conversation, stats, memory, tasks/plan, agents, contexts, live
 - **Multi-select** (`Space`) — bulk delete, copy paths, send input
-- **Actions menu** (`x`) — delete, move, resume, copy path, worktree, kill, input, jump, URLs, files
+- **Actions menu** (`x`) — delete, move, resume, fork, copy path, worktree, kill, input, jump, URLs, files
 - **Command mode** (`:`) — vim-style commands with fuzzy suggestions
 
 #### Search Filters
 
 | Filter | Matches |
 |--------|---------|
+| `is:here` | In the current tmux window |
 | `is:live` | Running Claude process |
 | `is:busy` | Actively responding |
+| `is:bg` | Background work in flight (shell/Monitor/cron) |
+| `is:wait` | Idle with unfinished todos/tasks |
+| `is:done` | All todos/tasks completed |
+| `is:stuck` | Live but stale with unfinished work |
 | `is:wt` | In a git worktree |
 | `is:team` | Part of a team session |
 | `is:fork` | Forked from another session |
+| `is:remote` | Remote session (experimental) |
+| `is:current` | Project path matches the directory ccx was launched from |
 | `has:mem` | Has memory file |
 | `has:todo` | Has todos |
 | `has:task` | Has tasks |
@@ -145,11 +176,12 @@ Browse all Claude Code sessions across projects, sorted by recency.
 | `has:compact` | Uses message compaction |
 | `has:skill` | Used skills |
 | `has:mcp` | Used MCP tools |
+| `proj:NAME` | Filter by project name |
 | `team:NAME` | Filter by team name |
 | `win:NAME` | Filter by tmux window name |
-| `is:current` | Session's project path matches the directory ccx was launched from (cwd) |
+| `tag:NAME` | Filter by custom tag/badge |
 
-Plain text terms match against project path, name, branch, session ID, first prompt, and teammate name. Multiple terms are AND-matched.
+Plain text terms match against project path, name, branch, session ID, first prompt, and teammate name. Multiple terms are AND-matched (all must match).
 
 #### Session Badges
 
@@ -159,7 +191,7 @@ Each session row carries two kinds of badges. Independent badges can co-occur; l
 
 - `[HERE]` — session belongs to the current tmux window
 - `[LIVE]` — a Claude process is attached to the session
-- `[R·exp]` — remote session (experimental)
+- `[R·exp]` — remote session (experimental; see [docs/remote-execution.md](docs/remote-execution.md))
 - Custom tags — user-applied via `x` → `t` (see [docs/CUSTOM_BADGES.md](docs/CUSTOM_BADGES.md))
 
 **Lifecycle** (priority high → low; at most one shown):
@@ -176,9 +208,10 @@ Example: `[HERE][LIVE][WAIT] my-feature` — current window, live process, idle 
 
 ### Cross-Session Search
 
-Search inside conversation content across all sessions (`/` or `:search`).
+From the session browser, press `/` (or `:search`) to search inside conversation content across all sessions.
 
 **Search syntax:**
+
 - `word1 word2` — AND match (all terms must appear)
 - `"exact phrase"` — Exact phrase matching
 - `-exclude` — Exclude terms from results
@@ -187,6 +220,7 @@ Search inside conversation content across all sessions (`/` or `:search`).
 - `tool:ToolName` — Only search specific tool calls
 
 **Features:**
+
 - Searches text, tool inputs/outputs, thinking blocks
 - Results stream in real-time as they're found
 - Matched terms are highlighted in snippets
@@ -194,6 +228,7 @@ Search inside conversation content across all sessions (`/` or `:search`).
 - Press `/` to edit the query
 
 **Example queries:**
+
 ```
 database migration                    # Find both terms
 "how do I" API                        # Phrase + term
@@ -203,23 +238,23 @@ assistant: "I recommend" -deprecated  # Complex combination
 
 ### Conversation View
 
-Drill into any session to read the full conversation.
+From the session browser, press `Enter` on a session to drill in and read the full conversation.
 
-- **Split-pane preview** (`Tab`/`→`) — foldable message detail with three detail levels:
+- **Preview pane** (`→`, see [Split panes and the preview](#split-panes-and-the-preview)) — foldable message detail at three levels (`Tab`/`Shift-Tab` cycles when the preview is focused):
   - **Compact** — text blocks only
   - **Standard** — text + per-turn artifact list (images, files, changes, URLs)
   - **Verbose** — text + tool blocks + full hook details
-- **Kitty image preview** — inline image rendering in the left pane for Kitty-compatible terminals (kitty, WezTerm, ghostty). Aspect-ratio-preserving, auto-detected inside tmux.
+- **Kitty image preview** — inline image rendering in the left pane for Kitty-compatible terminals (kitty, WezTerm, ghostty). Aspect-ratio-preserving, auto-detected inside tmux (see [docs/image-rendering.md](docs/image-rendering.md)).
 
 ![Kitty image preview](docs/gifs/08-kitty-image-preview.png)
 
 - **Block navigation** (`↑`/`↓`) — navigate text, tool calls, and results
 - **Fold/unfold** (`←`/`→`, `f`/`F`) — collapse/expand content blocks
 - **System tag folding** — `<system-reminder>`, `<task-notification>`, `<available-deferred-tools>`, etc. are folded by default, expandable on demand
-- **Block filter** (`/`) — filter by `is:tool`, `is:hook`, `is:error`, `is:skill`, `tool:Name`
+- **Block filter** (`/`, when preview focused) — filter by `is:tool`, `is:hook`, `is:error`, `is:skill`, `tool:Name`
 - **Subagent drill-down** (`Enter` on agent) — recursive navigation into sub-sessions with back-stack
 - **Side-question context** — background context from parent sessions is collapsed into a summary; only the actual question/answer is shown
-- **Full conversation** (`c`) — scrollable concatenated view with search (`/`) and copy mode
+- **Artifact browser** (`p`) — list a session's URLs, files, images, changes, and context tree; open, edit, or copy each
 - **Live tail** (`L`) — auto-follow active sessions in real-time
 - **Send input** (`I`) — send text to running Claude via tmux
 - **Jump to pane** (`J`) — switch to the tmux pane running the session
@@ -241,32 +276,36 @@ Timestamp ordering uses the **last message** in the subagent file (most recent a
 
 ### Detail View
 
-Full-screen message viewer with block-level navigation.
+From the conversation view, press `Enter` on a message to open this full-screen viewer with block-level navigation.
 
 - **Block cursor** (`↑`/`↓`) — navigate between blocks
 - **Fold/unfold** (`←`/`→`, `f`/`F`) — collapse/expand blocks
-- **Message navigation** (`n`/`N`) — step through messages
+- **Message navigation** (`n`/`N` or `]`/`[`) — step through messages
+- **Block filter** (`/`) — filter by `is:tool`, `is:hook`, `tool:Name`, etc.
 - **Copy mode** (`v`) — line-by-line selection with anchor/cursor, vim-style navigation
-- **Clipboard** (`y`) — copy selected text/blocks to system clipboard
-- **Pager** (`o`) — open in external pager
+- **Clipboard** (`y`) — copy selected blocks to system clipboard
+- **Actions menu** (`x`) — extract URLs, files, changes, or copy
 
 ### Global Stats (`v` → `s`)
 
-Aggregated metrics across all sessions with detail drill-down.
+From the session browser, press `v` then `s` (or `:view:stats`) to open aggregated metrics across all sessions with detail drill-down.
 
-- **Overview** — total sessions, messages, tokens, duration, cost
-- **Tools** (`p` → `t`) — built-in tool usage with timeline sparklines
-- **MCP Tools** (`p` → `m`) — MCP tool usage with error tracking
-- **Agents** (`p` → `a`) — agent type breakdown (Explore, general-purpose, etc.)
-- **Skills** (`p` → `s`) — skill usage with per-skill error counts
-- **Commands** (`p` → `c`) — command usage with per-command error counts
-- **Errors** (`p` → `e`) — error breakdown by tool/skill/command category
+Press `p` for the page menu, then a letter to drill in:
+
+- **Overview** (`o`) — total sessions, messages, tokens, duration, cost
+- **Tools** (`t`) — built-in tool usage with timeline sparklines
+- **MCP Tools** (`m`) — MCP tool usage with error tracking
+- **Agents** (`a`) — agent type breakdown (Explore, general-purpose, etc.)
+- **Skills** (`s`) — skill usage with per-skill error counts
+- **Commands** (`c`) — command usage with per-command error counts
+- **Errors** (`e`) — error breakdown by tool/skill/command category
+- **Repos** (`r`) / **Projects** (`p`) — activity grouped by base repo or project path
 
 Metrics tracked per session: token usage (input/output/cache per model), code activity (write/edit/read/bash counts), files touched, tool call timelines, message timing gaps, model switches, compaction events, hook invocations, and turns per request.
 
 ### Config Explorer (`v` → `c`)
 
-Browse and manage all Claude Code configuration files.
+From the session browser, press `v` then `c` (or `:view:config`) to browse and manage all Claude Code configuration files.
 
 - **Category filter** (`Tab`) — global, project, local, skills, agents, commands, MCP, hooks, enterprise
 - **Split preview** — file content with syntax awareness
@@ -299,7 +338,7 @@ This lets you test specific config combinations without affecting your main setu
 
 ### Plugin Explorer (`v` → `p`)
 
-Browse installed Claude Code plugins and their components.
+From the session browser, press `v` then `p` (or `:view:plugins`) to browse installed Claude Code plugins and their components.
 
 - **Component drill-down** (`Enter`) — view plugin agents, skills, commands, hooks, MCP servers
 - **Multi-select** (`Space`) — select components for batch editing
@@ -323,105 +362,89 @@ Multi-select plugin components and press `t` to launch an isolated Claude sessio
 
 ## Keybindings
 
+Navigation is shared across all views: arrow keys (or vim `h`/`j`/`k`/`l`), `pgup`/`pgdn` (or `ctrl+b`/`ctrl+f`), and `g`/`G` for top/bottom. `Esc` goes back or closes; `q` quits; `?` opens context help. Every key is remappable — see [Keybindings](#keybindings-1) under Configuration.
+
 ### Sessions
 
 | Key | Action |
 |-----|--------|
-| `Enter` | Open conversation view |
-| `/` | Cross-session content search (search inside all transcripts) |
-| `f` | Filter the list (path, name, prompt, `is:`/`has:` tokens) |
-| `g` | Filter by project directory |
-| `G` | Cycle group mode |
-| `Tab` | Cycle preview mode |
-| `Shift+Tab` | Reverse cycle preview |
-| `→` | Open/focus preview |
-| `←` | Close/unfocus preview |
+| `Enter` | Open conversation (jump to message when preview focused) |
+| `→` / `←` | Open/focus preview · close/unfocus preview |
+| `Tab` / `Shift+Tab` | Cycle group mode (list focused) · cycle preview detail (preview focused) |
 | `[` / `]` | Adjust split ratio |
-| `Space` | Multi-select toggle |
-| `1-9` | Number key shortcuts (configurable) |
-| `x` | Actions menu (delete, move, resume, fork, URLs, files, ...) |
+| `g` / `G` | Jump to top / bottom |
+| `.` | Toggle current-directory scope |
+| `Space` | Toggle multi-select |
+| `1`–`9` | Number-key shortcuts (preview/page, per focus side) |
+| `f` | Filter the list (path, name, `is:`/`has:` tokens) |
+| `/` | Cross-session content search |
+| `x` | Actions menu (delete, move, resume, fork, URLs, ...) |
 | `v` | Views menu (stats/config/plugins) |
-| `:` | Command mode |
+| `e` | Edit session files |
 | `L` | Live preview (tmux) |
-| `I` | Send input to live session |
-| `J` | Jump to tmux pane |
+| `:` | Command mode |
 | `R` | Refresh |
-| `S` | Global stats |
-| `?` | Help |
-| `q` | Quit |
 
 ### Conversation
 
 | Key | Action |
 |-----|--------|
-| `Enter` | Open detail / drill into agent |
-| `c` | Full conversation view |
-| `/` | Filter blocks |
-| `Tab` | Cycle preview detail (text/tool/hook) |
-| `↑` / `↓` | Navigate messages/blocks |
-| `←` / `→` | Fold/unfold blocks |
-| `f` / `F` | Fold/unfold all |
-| `[` / `]` | Adjust split ratio |
+| `Enter` | Open message detail · drill into agent/task |
+| `Tab` / `Shift+Tab` | Toggle flat/tree (list) · cycle compact/standard/verbose (preview) |
+| `→` / `←` | Focus preview · back/close |
+| `↑` / `↓` | Move cursor (list) · navigate blocks (preview) |
+| `←` / `→` | Fold/unfold block (preview focused) |
+| `f` / `F` | Fold all / expand all (preview focused) |
+| `Space` | Select block (preview focused) |
+| `v` | Copy mode · `y`/`Enter` copy selection |
+| `/` | Search messages (list) · filter blocks (preview) |
+| `J` | Jump to tree / origin message / tmux pane |
+| `p` | Artifact browser (URLs, files, images, changes, contexts) |
+| `e` | Edit menu (session/agent JSONL, export conversation as text) |
+| `x` | Actions menu (URLs, files, changes, copy) |
 | `L` | Toggle live tail |
-| `I` | Send input |
-| `J` | Jump to pane |
-| `x` | Actions menu (URLs, files) |
-| `e` | Edit menu (session/agent JSONL, text export) |
-| `u` | URL extraction (scoped to message/session) |
+| `I` | Send input to live session (tmux) |
+| `i` | Open selected image |
+| `t` | Toggle tooltips |
 | `R` | Refresh |
-| `Esc` | Back to sessions / close preview |
 
-### Detail View
+### Detail (full-screen message)
 
 | Key | Action |
 |-----|--------|
 | `↑` / `↓` | Navigate blocks |
-| `←` / `→` | Fold/unfold block |
-| `f` / `F` | Fold/unfold all |
-| `n` / `N` | Next/prev message |
-| `v` | Copy mode |
-| `y` | Copy to clipboard |
-| `x` | Actions menu (URLs, files) |
-| `o` | Open in pager |
+| `←` / `→` | Fold / unfold block |
+| `n` / `N` (or `]` / `[`) | Next / previous message |
+| `f` / `F` | Fold all / expand all |
+| `Space` | Select block |
+| `v` | Copy mode · `y` copy selection |
+| `/` | Filter / search blocks |
+| `x` | Actions menu (URLs, files, changes, copy) |
+| `Enter` / `i` | Open image · drill into agent |
+| `L` | Toggle live tail |
+| `R` | Refresh |
 
 ### Command Mode (`:`)
 
-Available from any view. Suggestions are context-aware — only relevant commands appear.
+Available from any view; suggestions are context-aware. Short aliases are in parentheses; commands can be chained (`view:config page:hooks`).
 
 | Command | View | Action |
 |---------|------|--------|
-| `view:sessions` | All | Switch to session browser |
-| `view:stats` | All | Open global stats |
-| `view:stats:tools` | All | Stats → tools detail |
-| `view:config` | All | Open config explorer |
-| `view:config:hooks` | All | Config → hooks filter |
-| `view:plugins` | All | Open plugin explorer |
-| `group:flat\|proj\|tree\|chain\|fork` | Sessions | Change grouping mode |
-| `preview:conv\|stats\|mem\|tasks\|live` | Sessions | Change preview mode |
-| `set:ratio N` | Sessions | Set split pane ratio (15-85) |
-| `page:memory\|hooks\|mcp\|skills\|keymaps\|shortcuts\|...` | Config | Filter config category |
-| `page:tools\|errors\|overview` | Stats | Switch stats page |
-| `refresh` | Sessions | Reload sessions |
-| `search` | All | Cross-session content search |
-| `config:edit` | All | Edit config file |
-| `detail:text\|tool\|hook` | Conversation | Set detail level |
-| `badge:toggle <KEY>` | Sessions | Toggle badge visibility (HERE,LIVE,BUSY,BG,WAIT,DONE,STUCK) |
-
-Short aliases: `g:flat`, `v:stats`, `p:hooks`, `cfg:edit`. Multi-command: `view:config page:hooks`.
-
-### Conversation / Detail
-
-| Key | Action |
-|-----|--------|
-| `x` | Actions menu (URLs, files) |
-| `e` | Edit menu (session, agent, text export) |
-
-### Global
-
-| Key | Action |
-|-----|--------|
-| `Esc` | Go back / close |
-| `q` | Quit |
+| `view:sessions\|stats\|config\|plugins` (`v:…`) | All | Switch view |
+| `view:stats:tools\|mcp\|agents\|skills\|commands\|errors` | All | Stats detail page |
+| `view:config:hooks` (`v:hooks`) | All | Config → hooks filter |
+| `group:flat\|proj\|tree\|chain\|fork\|repo` (`g:…`) | Sessions | Change grouping |
+| `preview:conv\|stats\|mem\|tasks\|agents\|contexts\|live` (`p:…`) | Sessions | Change preview |
+| `detail:compact\|standard\|verbose` (`d:…`) | Conversation | Set detail level |
+| `page:memory\|project\|skills\|hooks\|mcp\|keymaps\|shortcuts\|…` (`p:…`) | Config | Filter category |
+| `page:overview\|tools\|errors` | Stats | Switch stats page |
+| `set:ratio N` (`ratio`) | Sessions | Set split ratio (15–85) |
+| `set:worktree-dir NAME` (`wt:dir`) | Sessions | Set worktree subdirectory |
+| `badge:toggle KEY` (`bt`) | Sessions | Toggle badge visibility (HERE,LIVE,BUSY,BG,WAIT,DONE,STUCK) |
+| `badge:rm KEY` | Sessions | Remove a badge from all sessions |
+| `refresh` (`R`) | Sessions | Reload sessions |
+| `search` (`find`, `grep`) | All | Cross-session content search |
+| `config:edit` (`cfg:edit`, `km:edit`) | All | Edit config file |
 
 ## Configuration
 
@@ -439,16 +462,29 @@ theme: auto   # auto|light|dark — color scheme for the terminal background
 
 ### Keybindings
 
+Every binding is remappable. User values merge over the defaults, so you only list the keys you want to change. The sections are `session`, `actions`, `views`, `conversation`, `preview`, and `navigation` (extra aliases that supplement the built-in arrow keys). Run `:config:edit` to see all options.
+
 ```yaml
 session:
   quit: q
   open: enter
   actions: x
-  # ... see :config:edit for all options
+  filter: f
+  search: /
 actions:
   delete: d
+  fork: F
   import_mem: M
   remove_mem: X
+navigation:                 # vim/emacs aliases on top of the arrow keys
+  up: [k]
+  down: [j]
+  left: [h]
+  right: [l]
+  page_up: [ctrl+b]
+  page_down: [ctrl+f]
+  home: [g]
+  end: [G]
 ```
 
 ### Preferences (auto-saved on quit)
@@ -458,7 +494,7 @@ preferences:
   group_mode: flat          # flat|proj|tree|chain|fork
   preview_mode: stats       # conv|stats|mem|tasks|live
   view_mode: sessions       # sessions|config|plugins|stats
-  conv_detail_level: 1      # 0=text, 1=tool, 2=hook
+  conv_detail_level: 1      # 0=compact, 1=standard, 2=verbose
   split_ratio: 35           # 15-85
   worktree_dir: .worktree   # git worktree subdirectory name
   hidden_badges: [DONE, STUCK]  # hide specific badges
@@ -506,14 +542,16 @@ shortcuts:
       "2": "preview:stats"
       "3": "preview:mem"
       "4": "preview:tasks"
-      "5": "preview:live"
+      "5": "preview:agents"
+      "6": "preview:live"
+      "7": "preview:contexts"
     right:                    # preview pane focused
       "1": "some:command"
   conversation:
     left:                     # message list focused
-      "1": "detail:text"
-      "2": "detail:tool"
-      "3": "detail:hook"
+      "1": "detail:compact"
+      "2": "detail:standard"
+      "3": "detail:verbose"
   config:
     left:
       "1": "page:overview"
@@ -558,11 +596,16 @@ The actions menu (`x` key) provides session-specific operations:
 | `d` | Delete session | Always |
 | `m` | Move/rename project | Always |
 | `r` | Resume session | Always |
-| `y` | Copy project path | Always |
+| `n` | New session | Always |
+| `F` | Fork session | Always |
 | `w` | Create git worktree | Always |
+| `y` | Copy project path | Always |
+| `c` | Copy conversation text | Always |
+| `t` | Edit custom tags/badges | Always |
 | `u` | Extract URLs | Always |
 | `f` | Extract file paths | Always |
-| `F` | Fork session | Always |
+| `g` | Extract changed files | Always |
+| `R` | Send to remote (experimental) | Always |
 | `X` | Remove memory files | Has memory |
 | `M` | Import memory from worktree | Is worktree |
 | `k` | Kill live session | Live + tmux |
@@ -656,6 +699,8 @@ internal/
 ccx reads Claude Code's session files from `~/.claude/projects/`. Each session is a JSONL file containing the full conversation history — user prompts, assistant responses, tool calls, and results. Subagent sessions live under `{sessionID}/subagents/agent-*.jsonl` with optional `*.meta.json` for type metadata.
 
 Session metadata is cached to `~/.claude/sessions.gob` for instant startup (~1ms). A full async scan runs in the background to pick up new sessions.
+
+Live sessions are detected by reading Claude Code's process registry at `~/.claude/sessions/<pid>.json`; the full schema and ccx's read strategy are documented in [docs/claude-code/live-session-registry.md](docs/claude-code/live-session-registry.md).
 
 The TUI is built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Lip Gloss](https://github.com/charmbracelet/lipgloss).
 
