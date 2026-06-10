@@ -148,22 +148,22 @@ func (a *App) handleMessageFullKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		return a.popNavFrame()
-	case "v":
+	case a.keymap.Preview.CopyMode:
 		a.enterMsgFullCopyMode()
 		return a, nil
-	case "y":
+	case a.keymap.Preview.CopyAll:
 		a.copyMsgFullBlocks()
 		return a, nil
-	case "L":
+	case a.keymap.Conversation.LiveToggle:
 		return a.toggleLiveTail()
-	case "/":
+	case a.keymap.Preview.Filter:
 		if a.msgFull.allMessages {
 			a.startMsgFullSearch()
 		} else {
 			a.startMsgFullBlockFilter()
 		}
 		return a, nil
-	case "x":
+	case a.keymap.Conversation.Actions:
 		a.convActionsMenu = true
 		return a, nil
 	case a.keymap.Session.Refresh:
