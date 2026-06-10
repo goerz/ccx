@@ -6082,61 +6082,36 @@ func (a *App) renderBreadcrumb() string {
 		}
 	}
 
-	// Context action links (e.g. Agents, Tools, Memory)
-	type actionLink struct {
-		label  string
-		action string
-	}
-	var actions []actionLink
-	switch a.state {
-	case viewSessions:
-		if a.sessSplit.Show && a.sessPreviewMode != sessPreviewConversation {
-			label := "[Stats]"
-			if a.sessPreviewMode == sessPreviewMemory {
-				label = "[Memory]"
-			} else if a.sessPreviewMode == sessPreviewTasksPlan {
-				label = "[Tasks]"
-			}
-			actions = []actionLink{{label, ""}}
-		}
-	}
-
-	if len(actions) > 0 {
-		actionStyle := lipgloss.NewStyle().Foreground(fgMuted).Background(colorTitleBg)
-		sepAction := lipgloss.NewStyle().Foreground(fgDimmer).Background(colorTitleBg).Render("  ")
-		text += sepAction
-		x += lipgloss.Width(sepAction)
-		for i, act := range actions {
-			if i > 0 {
-				divider := lipgloss.NewStyle().Foreground(fgDimmer).Background(colorTitleBg).Render(" ")
-				text += divider
-				x += lipgloss.Width(divider)
-			}
-			label := actionStyle.Render(act.label)
-			labelW := lipgloss.Width(label)
-			a.breadcrumbSegs = append(a.breadcrumbSegs, breadcrumbSegment{
-				startX: x,
-				endX:   x + labelW,
-				action: act.action,
-			})
-			text += label
-			x += labelW
-		}
+	// When a split pane is visible, the right pane gets its own title in the
+	// title bar, left-aligned above the right pane (mirroring the split).
+	dividerCol := a.activeDividerCol()
+	rpTitle := ""
+	if dividerCol > 0 {
+		rpTitle = a.rightPaneTitle()
 	}
 
 	// Right-aligned status: item count + scroll % + loading
 	rightParts := a.breadcrumbRightStatus()
+	rightW := 0
 	if rightParts != "" {
 		countStyle := lipgloss.NewStyle().Foreground(fgMutedZinc).Background(colorTitleBg)
 		rightStr := countStyle.Render(rightParts + " ")
-		rightW := lipgloss.Width(rightStr)
+		rightW = lipgloss.Width(rightStr)
 		maxLeftW := max(a.width-rightW-1, 1)
+		// Keep the breadcrumb within the left pane so it doesn't run under the
+		// right pane's title.
+		if rpTitle != "" {
+			maxLeftW = min(maxLeftW, dividerCol)
+		}
 		if lipgloss.Width(text) > maxLeftW {
 			text = truncate(text, maxLeftW)
 			x = lipgloss.Width(text)
 		}
 		gap := max(a.width-x-rightW, 1)
 		text += lipgloss.NewStyle().Background(colorTitleBg).Render(strings.Repeat(" ", gap)) + rightStr
+	} else if rpTitle != "" && lipgloss.Width(text) > dividerCol {
+		text = truncate(text, dividerCol)
+		x = lipgloss.Width(text)
 	}
 
 	// Fill remaining width
@@ -6145,7 +6120,94 @@ func (a *App) renderBreadcrumb() string {
 		text += lipgloss.NewStyle().Background(colorTitleBg).Render(strings.Repeat(" ", a.width-titleW))
 	}
 
+	// Overlay the right pane's title above the right pane (after the divider).
+	if rpTitle != "" {
+		titleStyle := lipgloss.NewStyle().Bold(true).Foreground(fgVeryLight).Background(colorTitleBg)
+		styled := titleStyle.Render(rpTitle)
+		col := dividerCol + 1 // right pane content begins after the border column
+		maxW := a.width
+		if rightW > 0 {
+			maxW = max(a.width-rightW-1, col)
+		}
+		text = overlayLine(text, styled, col, maxW)
+	}
+
 	return text
+}
+
+// rightPaneTitle returns a short title describing the content of the active
+// split's right pane, or "" when no split with a titled right pane is shown.
+func (a *App) rightPaneTitle() string {
+	switch a.state {
+	case viewSessions:
+		if a.sessSplit.Show {
+			return sessPreviewTitle(a.sessPreviewMode)
+		}
+	case viewConversation:
+		if a.conv.split.Show {
+			return a.convRightPaneTitle()
+		}
+	}
+	return ""
+}
+
+// sessPreviewTitle maps a session preview mode to its title-bar label.
+func sessPreviewTitle(m sessPreview) string {
+	switch m {
+	case sessPreviewConversation:
+		return "Conversation"
+	case sessPreviewStats:
+		return "Stats"
+	case sessPreviewMemory:
+		return "Memory"
+	case sessPreviewTasksPlan:
+		return "Tasks / Plan"
+	case sessPreviewAgents:
+		return "Agents"
+	case sessPreviewShells:
+		return "Shells"
+	case sessPreviewContexts:
+		return "Contexts"
+	case sessPreviewLive:
+		return "Live"
+	case sessPreviewRemote:
+		return "Remote"
+	}
+	return ""
+}
+
+// convRightPaneTitle describes the selected conversation item shown in the
+// right pane of the conversation view.
+func (a *App) convRightPaneTitle() string {
+	items := a.convList.VisibleItems()
+	idx := a.convList.Index()
+	if idx < 0 || idx >= len(items) {
+		return ""
+	}
+	ci, ok := items[idx].(convItem)
+	if !ok {
+		return ""
+	}
+	switch ci.kind {
+	case convMsg:
+		return fmt.Sprintf("#%d %s", ci.merged.startIdx+1, strings.ToUpper(ci.merged.entry.Role))
+	case convTask:
+		if ci.task.Subject != "" {
+			return "Task: " + ci.task.Subject
+		}
+		return "Task"
+	case convAgent:
+		if ci.agent.ShortID != "" {
+			return "Agent " + ci.agent.ShortID
+		}
+		return "Agent"
+	case convSessionMeta:
+		if ci.label != "" {
+			return ci.label
+		}
+		return "Session"
+	}
+	return ""
 }
 
 // breadcrumbRightStatus returns the right-aligned status text for the title bar.
