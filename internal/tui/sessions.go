@@ -229,7 +229,7 @@ func (d sessionDelegate) Render(w io.Writer, m list.Model, index int, item list.
 		promptStyle = selectedStyle
 	}
 
-	idStr := idStyle.Render(s.ShortID)
+	idStr := emojiSession + " " + idStyle.Render(s.ShortID)
 
 	timeRaw := timeAgo(s.ModTime)
 	timePad := fmt.Sprintf("%-*s", d.timeW, timeRaw)
@@ -241,58 +241,49 @@ func (d sessionDelegate) Render(w io.Writer, m list.Model, index int, item list.
 
 	// Build badges first to know their width
 	badges := ""
-	badgesW := 0
 	hide := d.hiddenBadges
 	if s.IsCurrentWindow && !hide["HERE"] {
-		badges += " " + hereBadge.Render("[HERE]")
-		badgesW += 7
+		badges += " 📍 " + hereBadge.Render("[HERE]")
 	}
 	if s.IsLive && !hide["LIVE"] {
-		badges += " " + liveBadge.Render("[LIVE]")
-		badgesW += 7
+		badges += " 🟢 " + liveBadge.Render("[LIVE]")
 	}
 	switch s.Lifecycle() {
 	case session.LifecycleBusy:
 		if !hide["BUSY"] {
-			badges += " " + busyBadge.Render("[BUSY]")
-			badgesW += 7
+			badges += " ⏳ " + busyBadge.Render("[BUSY]")
 		}
 	case session.LifecycleBG:
 		if !hide["BG"] {
-			badges += " " + bgBadgeStyle.Render("[BG]")
-			badgesW += 5
+			badges += " 🌙 " + bgBadgeStyle.Render("[BG]")
 		}
 	case session.LifecycleStuck:
 		if !hide["STUCK"] {
-			badges += " " + stuckBadgeStyle.Render("[STUCK]")
-			badgesW += 8
+			badges += " ⚠️ " + stuckBadgeStyle.Render("[STUCK]")
 		}
 	case session.LifecycleWait:
 		if !hide["WAIT"] {
-			badges += " " + waitBadgeStyle.Render("[WAIT]")
-			badgesW += 7
+			badges += " ⏸️ " + waitBadgeStyle.Render("[WAIT]")
 		}
 	case session.LifecycleDone:
 		if !hide["DONE"] {
-			badges += " " + doneBadgeStyle.Render("[DONE]")
-			badgesW += 7
+			badges += " ✅ " + doneBadgeStyle.Render("[DONE]")
 		}
 	}
 	// Custom user badges
 	for _, badge := range s.CustomBadges {
 		badgeText := "[" + badge + "]"
 		badges += " " + customBadgeStyle.Render(badgeText)
-		badgesW += len(badgeText) + 1
 	}
 	if s.IsRemote {
 		remoteBadge := lipgloss.NewStyle().Foreground(huePrimary).Bold(true)
-		badges += " " + remoteBadge.Render("[R·exp]")
-		badgesW += 8
+		badges += " 📡 " + remoteBadge.Render("[R·exp]")
 	}
+	badgesW := lipgloss.Width(badges)
 
 	// Calculate available width for project column
-	// cursor(2) + tree(treePrefixW) + id(8) + 2 + time + 2 + msg + 2 + project + badges
-	fixedW := 2 + treePrefixW + 8 + 2 + d.timeW + 2 + d.msgW + 2 + badgesW
+	// cursor(2) + tree(treePrefixW) + emoji+sp+id(11) + 2 + time + 2 + msg + 2 + project + badges
+	fixedW := 2 + treePrefixW + 11 + 2 + d.timeW + 2 + d.msgW + 2 + badgesW
 	maxProjW := width - fixedW
 	if maxProjW < 4 {
 		maxProjW = 4
@@ -408,7 +399,7 @@ func newSessionList(sessions []session.Session, width, height int, groupMode int
 	l.Filter = wrapPinCurrentWindow(items, base)
 	configureListSearch(&l)
 	setListFilterKey(&l, "f") // "/" is reserved for cross-session search
-	l.SetSize(width, height) // re-compute pagination after hiding bars
+	l.SetSize(width, height)  // re-compute pagination after hiding bars
 	return l
 }
 
@@ -1009,26 +1000,27 @@ func renderHelpModal(bg string, screenW, screenH int, km Keymap, shortcutHint st
 	sb.WriteString(headerStyle.Render(" Badges") + "\n")
 	type badge struct {
 		style lipgloss.Style
+		emoji string
 		badge string
 		desc  string
 	}
 	allBadges := []badge{
-		{hereBadge, "[HERE]", "In current tmux window"},
-		{liveBadge, "[LIVE]", "Running Claude"},
-		{busyBadge, "[BUSY]", "Responding now"},
-		{bgBadgeStyle, "[BG]", "Background shell/monitor/cron"},
-		{waitBadgeStyle, "[WAIT]", "Idle, waiting for user"},
-		{doneBadgeStyle, "[DONE]", "All work completed"},
-		{stuckBadgeStyle, "[STUCK]", "Live but stale with unfinished work"},
-		{lipgloss.NewStyle().Foreground(huePrimary).Bold(true), "[R·exp]", "Remote (experimental)"},
+		{hereBadge, "📍", "[HERE]", "In current tmux window"},
+		{liveBadge, "🟢", "[LIVE]", "Running Claude"},
+		{busyBadge, "⏳", "[BUSY]", "Responding now"},
+		{bgBadgeStyle, "🌙", "[BG]", "Background shell/monitor/cron"},
+		{waitBadgeStyle, "⏸️", "[WAIT]", "Idle, waiting for user"},
+		{doneBadgeStyle, "✅", "[DONE]", "All work completed"},
+		{stuckBadgeStyle, "⚠️", "[STUCK]", "Live but stale with unfinished work"},
+		{lipgloss.NewStyle().Foreground(huePrimary).Bold(true), "📡", "[R·exp]", "Remote (experimental)"},
 	}
 	// Render badges in pairs (two per line)
 	for i := 0; i < len(allBadges); i += 2 {
 		b := allBadges[i]
-		left := fmt.Sprintf(" %s %-16s", b.style.Render(fmt.Sprintf("%-6s", b.badge)), d.Render(b.desc))
+		left := fmt.Sprintf(" %s %s %-16s", b.emoji, b.style.Render(fmt.Sprintf("%-6s", b.badge)), d.Render(b.desc))
 		if i+1 < len(allBadges) {
 			b2 := allBadges[i+1]
-			right := fmt.Sprintf("  %s %s", b2.style.Render(fmt.Sprintf("%-6s", b2.badge)), d.Render(b2.desc))
+			right := fmt.Sprintf("  %s %s %s", b2.emoji, b2.style.Render(fmt.Sprintf("%-6s", b2.badge)), d.Render(b2.desc))
 			sb.WriteString(left + right + "\n")
 		} else {
 			sb.WriteString(left + "\n")

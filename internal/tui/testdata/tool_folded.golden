@@ -1,9 +1,9 @@
-ASSISTANT  2025-06-01 12:00:00
+🤖 ASSISTANT  2025-06-01 12:00:00
 ────────────────────────────────────────────────────────────────────────────────
 
 Let me check that file.
 
-Tool: Read  /tmp/test.go
+📖 Read  /tmp/test.go
 Result: package main
                     
 func main() {}      

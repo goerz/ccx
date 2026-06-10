@@ -87,10 +87,10 @@ func renderConversationPreview(msgs []mergedMsg, width, cursor int, expanded map
 			cursorStr = convCursorStyle.Render("> ")
 		}
 
-		// Role
+		// Role (emoji + label, padded so the time column stays aligned)
 		var role string
 		if isToolOnly {
-			role = toolOnlySepStyle.Render("│") + "   "
+			role = "   " + toolOnlySepStyle.Render("│") + "   "
 		} else if e.Role == "user" {
 			if isPrevDiffRole && i > 0 {
 				cursorStr = convSepStyle.Render("─ ")
@@ -98,9 +98,9 @@ func renderConversationPreview(msgs []mergedMsg, width, cursor int, expanded map
 					cursorStr = convCursorStyle.Render("> ")
 				}
 			}
-			role = userLabelStyle.Render("USER")
+			role = emojiUser + " " + userLabelStyle.Render("USER")
 		} else {
-			role = assistantLabelStyle.Render("ASST")
+			role = emojiAssistant + " " + assistantLabelStyle.Render("ASST")
 		}
 
 		// Time
@@ -118,9 +118,9 @@ func renderConversationPreview(msgs []mergedMsg, width, cursor int, expanded map
 		}
 		idxStr := dimStyle.Render(fmt.Sprintf("%-*s", idxW, idxRaw))
 
-		// Prefix: cursor(2) + role(4) + sp(1) + time(5) + sp(1) + idx(idxW) + sp(2)
+		// Prefix: cursor(2) + role(7) + sp(1) + time(5) + sp(1) + idx(idxW) + sp(2)
 		prefix := cursorStr + role + " " + ts + " " + idxStr + "  "
-		prefixW := 2 + 4 + 1 + 5 + 1 + idxW + 2
+		prefixW := 2 + 7 + 1 + 5 + 1 + idxW + 2
 
 		preview := session.EntryPreview(e)
 
@@ -476,15 +476,59 @@ func renderConversationText(merged []mergedMsg, width int) string {
 
 // messageHeaderLabel builds the emoji-marked role line used in conversation
 // exports, e.g. " 🤖 ASSISTANT  2026-06-09 21:11:48  model=claude-opus-4-8".
+// Emoji markers used to prefix role labels and session rows across the UI.
+const (
+	emojiUser      = "🧑"
+	emojiAssistant = "🤖"
+	emojiCompact   = "📋"
+	emojiSession   = "💬"
+)
+
+// roleEmoji returns the emoji marker for an entry's role.
+func roleEmoji(e session.Entry) string {
+	switch {
+	case isAutoCompacted(e):
+		return emojiCompact
+	case e.Role == "user":
+		return emojiUser
+	default:
+		return emojiAssistant
+	}
+}
+
+// toolIcon returns an emoji marker for a tool block.
+func toolIcon(name string) string {
+	switch name {
+	case "Bash", "BashOutput", "KillShell", "KillBash":
+		return "🖥️"
+	case "Read":
+		return "📖"
+	case "Edit", "Write", "MultiEdit", "NotebookEdit":
+		return "✏️"
+	case "Grep", "Glob", "LS":
+		return "🔍"
+	case "WebFetch", "WebSearch":
+		return "🌐"
+	case "Task", "Agent":
+		return "👥"
+	case "TodoWrite":
+		return "✅"
+	case "Skill":
+		return "🧩"
+	default:
+		return "🔧"
+	}
+}
+
 func messageHeaderLabel(e session.Entry) string {
 	var label string
 	switch {
 	case isAutoCompacted(e):
-		label = "📋 COMPACTION SUMMARY"
+		label = emojiCompact + " COMPACTION SUMMARY"
 	case e.Role == "user":
-		label = "🧑 USER"
+		label = emojiUser + " USER"
 	default:
-		label = "🤖 ASSISTANT"
+		label = emojiAssistant + " ASSISTANT"
 	}
 	if !e.Timestamp.IsZero() {
 		label += "  " + e.Timestamp.Format("2006-01-02 15:04:05")
@@ -528,11 +572,11 @@ func renderFullMessageImpl(e session.Entry, width int, folds foldSet, formats fo
 
 	var label string
 	if isAutoCompacted(e) {
-		label = compactBadgeStyle.Render("COMPACTION SUMMARY")
+		label = emojiCompact + " " + compactBadgeStyle.Render("COMPACTION SUMMARY")
 	} else if e.Role == "user" {
-		label = userLabelStyle.Render("USER")
+		label = emojiUser + " " + userLabelStyle.Render("USER")
 	} else {
-		label = assistantLabelStyle.Render("ASSISTANT")
+		label = emojiAssistant + " " + assistantLabelStyle.Render("ASSISTANT")
 	}
 
 	ts := ""
@@ -670,12 +714,12 @@ func renderFullMessageImpl(e session.Entry, width int, folds foldSet, formats fo
 			if block.ToolName == "Skill" {
 				skillName := extractSkillFromInput(block.ToolInput)
 				if skillName != "" {
-					buf.WriteString(skillBlockStyle.Render("Skill: " + skillName))
+					buf.WriteString(skillBlockStyle.Render(toolIcon("Skill") + " " + skillName))
 				} else {
-					buf.WriteString(toolBlockStyle.Render("Tool: Skill"))
+					buf.WriteString(toolBlockStyle.Render(toolIcon("Skill") + " Skill"))
 				}
 			} else {
-				buf.WriteString(toolBlockStyle.Render("Tool: " + block.ToolName))
+				buf.WriteString(toolBlockStyle.Render(toolIcon(block.ToolName) + " " + block.ToolName))
 			}
 			// Show hook badges inline (unless hidden)
 			if len(block.Hooks) > 0 && !opts.hideHooks {
@@ -717,7 +761,7 @@ func renderFullMessageImpl(e session.Entry, width int, folds foldSet, formats fo
 			prefix := "Result: "
 			style := dimStyle
 			if block.IsError {
-				prefix = "Error: "
+				prefix = "⚠️ Error: "
 				style = errorStyle
 			}
 			if cursorPrefix != "" {
@@ -747,9 +791,9 @@ func renderFullMessageImpl(e session.Entry, width int, folds foldSet, formats fo
 				if len(summary) > 60 {
 					summary = summary[:57] + "..."
 				}
-				buf.WriteString(dimStyle.Render("(thinking) "+summary) + "\n")
+				buf.WriteString(dimStyle.Render("💭 "+summary) + "\n")
 			} else {
-				buf.WriteString(dimStyle.Render("(thinking)") + "\n")
+				buf.WriteString(dimStyle.Render("💭 thinking") + "\n")
 				wrapped := wrapText(block.Text, w)
 				buf.WriteString(dimStyle.Render(wrapped) + "\n\n")
 			}
@@ -778,7 +822,7 @@ func renderFullMessageImpl(e session.Entry, width int, folds foldSet, formats fo
 			}
 			label := block.Text
 			if block.ImagePasteID > 0 {
-				label = fmt.Sprintf("▣ %s  (paste #%d — Enter to open)", block.Text, block.ImagePasteID)
+				label = fmt.Sprintf("🖼️ %s  (paste #%d — Enter to open)", block.Text, block.ImagePasteID)
 			}
 			buf.WriteString(dimStyle.Render(label) + "\n\n")
 		}

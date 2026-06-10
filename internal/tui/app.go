@@ -2745,10 +2745,10 @@ func (a *App) renderViewsHintBox() string {
 		}
 		return h.Render(displayKey(k)) + d.Render(":"+label)
 	}
-	parts = append(parts, viewLabel("↵", "sessions", a.state == viewSessions))
-	parts = append(parts, viewLabel(km.Stats, "stats", a.state == viewGlobalStats))
-	parts = append(parts, viewLabel(km.Config, "config", a.state == viewConfig))
-	parts = append(parts, viewLabel(km.Plugins, "plugins", a.state == viewPlugins))
+	parts = append(parts, viewLabel("↵", "💬 sessions", a.state == viewSessions))
+	parts = append(parts, viewLabel(km.Stats, "📊 stats", a.state == viewGlobalStats))
+	parts = append(parts, viewLabel(km.Config, "⚙️ config", a.state == viewConfig))
+	parts = append(parts, viewLabel(km.Plugins, "🧩 plugins", a.state == viewPlugins))
 	line := strings.Join(parts, sp)
 	body := line + "\n" + d.Render("esc:cancel")
 	boxStyle := lipgloss.NewStyle().

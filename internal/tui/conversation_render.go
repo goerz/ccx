@@ -27,6 +27,7 @@ func renderConvMsg(w io.Writer, ci convItem, selected bool, width int, clamp lip
 	} else if e.Role == "assistant" {
 		role = assistantLabelStyle.Render("ASST")
 	}
+	role = roleEmoji(e) + " " + role
 
 	ts := "     "
 	if !e.Timestamp.IsZero() {
@@ -40,7 +41,7 @@ func renderConvMsg(w io.Writer, ci convItem, selected bool, width int, clamp lip
 	}
 
 	// Text preview
-	preview := convMsgPreview(e, width-20)
+	preview := convMsgPreview(e, width-23)
 	pStyle := dimStyle
 	if selected {
 		pStyle = selectedStyle
@@ -48,7 +49,7 @@ func renderConvMsg(w io.Writer, ci convItem, selected bool, width int, clamp lip
 		pStyle = acDimStyle
 	}
 	if preview != "" {
-		availW := width - 20
+		availW := width - 23
 		if filterTerm != "" && availW > 0 {
 			preview = "  " + highlightSnippet(preview, filterTerm, availW, pStyle)
 		} else {
@@ -60,7 +61,7 @@ func renderConvMsg(w io.Writer, ci convItem, selected bool, width int, clamp lip
 	imgBadge := ""
 	for _, block := range e.Content {
 		if block.Type == "image" {
-			imgBadge = " " + lipgloss.NewStyle().Foreground(hueSkyBlue).Render("▣")
+			imgBadge = " " + lipgloss.NewStyle().Foreground(hueSkyBlue).Render("🖼️")
 			break
 		}
 	}
